@@ -44,9 +44,9 @@
 
     <script type="module">
         // 需求 5: Firebase 初始化與雲端儲存設定
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-auth.js";
-        import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-firestore.js";
+        import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // 修正點：移除 getAnalytics 引用，防止儲存時報錯導致空白頁
         const firebaseConfig = typeof __firebase_config !== 'undefined' 
@@ -57,8 +57,7 @@
     		projectId: "drinks-4eb2c",
     		storageBucket: "drinks-4eb2c.firebasestorage.app",
     		messagingSenderId: "394916838880",
-    		appId: "1:394916838880:web:ebe01d2df44542f0347f85",
-    		measurementId: "G-2NMHKGMR9X"
+    		appId: "1:394916838880:web:ebe01d2df44542f0347f85"
 	    };
 
         const app = initializeApp(firebaseConfig);
