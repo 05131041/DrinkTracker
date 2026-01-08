@@ -64,7 +64,7 @@
 
   	// Initialize Firebase
   	const app = initializeApp(firebaseConfig);
-
+	const analytics = getAnalytics(app);
         const auth = getAuth(app);
         const db = getFirestore(app);
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'drink-tracker-2026';
@@ -336,7 +336,7 @@
 
                             <div className="mb-4">
                                 <div className="flex flex-wrap gap-1.5">
-                                    {['正常', '半糖', '微糖', '無糖', '無法調整'].map(l => (
+                                    {['正常糖', '半糖', '微糖', '無糖', '無法調整'].map(l => (
                                         <button key={l} onClick={() => up(i, 'sugar', l)} className={`px-3 py-1.5 text-[9px] font-bold rounded-xl border ${d.sugar === l ? 'bg-[#F3E5F5] text-[#A696AF] border-[#F3E5F5]' : 'bg-white border-[#F8F2FC]'}`}>{l}</button>
                                     ))}
                                 </div>
