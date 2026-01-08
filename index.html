@@ -45,7 +45,7 @@
     <script type="module">
         // 需求 5: Firebase 初始化與雲端儲存設定
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-auth.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // 修正點：移除 getAnalytics 引用，防止儲存時報錯導致空白頁
@@ -365,3 +365,4 @@
     </script>
 </body>
 </html>
+
