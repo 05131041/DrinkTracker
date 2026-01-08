@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>是多愛喝 2026</title>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Noto Sans TC', sans-serif; }
+        .dreamy-gradient {
+            background: linear-gradient(135deg, #FDFBFD 0%, #F8F2FC 100%);
+        }
+        @keyframes float {
+            0% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-20px) rotate(5deg); }
+            100% { transform: translateY(0px) rotate(0deg); }
+        }
+        .float-element { animation: float 8s ease-in-out infinite; }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #E2F0FB; border-radius: 10px; }
+        
+        .btn-hover-sparkle:hover {
+            box-shadow: 0 0 15px rgba(253, 226, 228, 0.8);
+            transform: scale(1.02);
+        }
+    </style>
+</head>
+<body class="dreamy-gradient min-h-screen text-[#94849A]">
+    <div id="root"></div>
+
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-auth.js";
+        import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-firestore.js";
+
+        const firebaseConfig = typeof __firebase_config !== 'undefined' 
+            ? JSON.parse(__firebase_config) 
+            : { apiKey: "AIzaSyCFnYhdOMJNAxCnVoUDxDtAItKQjURd14w", authDomain: "drinks-4eb2c.firebaseapp.com", projectId: "drinks-4eb2c", storageBucket: "drinks-4eb2c.firebasestorage.app", messagingSenderId: "394916838880", appId: "1:394916838880:web:ebe01d2df44542f0347f85" };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'drink-tracker-2026';
+
+        window.FB = { db, auth, appId, doc, setDoc, onSnapshot, signInAnonymously, signInWithCustomToken, onAuthStateChanged };
+    </script>
+
+    <script type="text/babel">
+        const { useState, useEffect, useMemo } = React;
+
+        // 可愛的主圖示：珍奶
+        const IconBoba = ({className}) => (
+            <svg className={className} viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M18 14L22 52C22 55.3137 24.6863 58 28 58H36C39.3137 58 42 55.3137 42 52L46 14" stroke="currentColor" strokeWidth="3" strokeLinecap="round"/>
+                <path d="M16 14H48" stroke="currentColor" strokeWidth="3" strokeLinecap="round"/>
+                <path d="M40 6L36 14" stroke="currentColor" strokeWidth="3" strokeLinecap="round"/>
+                <circle cx="28" cy="48" r="2.5" fill="currentColor"/>
+                <circle cx="36" cy="46" r="2.5" fill="currentColor"/>
+                <circle cx="32" cy="52" r="2.5" fill="currentColor"/>
+                <circle cx="26" cy="42" r="2.5" fill="currentColor"/>
+                <circle cx="38" cy="40" r="2.5" fill="currentColor"/>
+                <path d="M22 28C22 28 26 30 32 30C38 30 42 28 42 28" stroke="currentColor" strokeWidth="2" strokeLinecap="round" opacity="0.3"/>
+            </svg>
+        );
+
+        // 隨機小圖示庫
+        const RandomIcons = [
+            // 冰淇淋
+            (props) => <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M7 11c0-2.8 2.2-5 5-5s5 2.2 5 5c0 1.1-.4 2.1-1 3H8c-.6-.9-1-1.9-1-3zM12 14v7M9 14l3 7 3-7" /></svg>,
+            // 咖啡杯
+            (props) => <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 8h1a4 4 0 110 8h-1M3 8h14v9a4 4 0 01-4 4H7a4 4 0 01-4-4V8zM6 2v2M10 2v2M14 2v2" /></svg>,
+            // 櫻桃
+            (props) => <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="7" cy="18" r="4"/><circle cx="17" cy="18" r="4"/><path d="M9 14.5c0-4 3.5-7.5 7.5-7.5M17 14.5V2" /></svg>,
+            // 甜甜圈
+            (props) => <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/></svg>,
+            // 熱飲
+            (props) => <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 8h1a4 4 0 010 8h-1M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8zM14 2c0 1-1 1-1 2s1 1 1 2M10 2c0 1-1 1-1 2s1 1 1 2M6 2c0 1-1 1-1 2s1 1 1 2" /></svg>,
+            // 蘇打
+            (props) => <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M7 22h10V5H7v17zM12 5V2M15 2h-6M10 10c0-1 1-1 1-2M13 14c0-1 1-1 1-2" /></svg>
+        ];
+
+        const IconHeart = ({fill, className}) => <svg className={className} fill={fill || "none"} stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>;
+        const IconStar = ({fill, className}) => <svg className={className} fill={fill || "none"} stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.382-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"></path></svg>;
+
+        const ICE_OPTIONS = ['正常冰', '少冰', '微冰', '去冰', '常溫', '溫'];
+        const SUGAR_OPTIONS = ['無法調整', '半糖', '微糖', '一分糖', '無糖'];
+
+        function App() {
+            const [user, setUser] = useState(null);
+            const [currentMonth, setCurrentMonth] = useState(new Date(2026, 0, 1));
+            const [records, setRecords] = useState({});
+            const [selectedDate, setSelectedDate] = useState(null);
+            const [isModalOpen, setIsModalOpen] = useState(false);
+
+            useEffect(() => {
+                const checkFB = setInterval(() => {
+                    if (window.FB) {
+                        clearInterval(checkFB);
+                        const { auth, onAuthStateChanged, signInAnonymously, signInWithCustomToken } = window.FB;
+                        const initAuth = async () => {
+                            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                                await signInWithCustomToken(auth, __initial_auth_token);
+                            } else {
+                                await signInAnonymously(auth);
+                            }
+                        };
+                        initAuth();
+                        onAuthStateChanged(auth, setUser);
+                    }
+                }, 100);
+            }, []);
+
+            useEffect(() => {
+                if (!user || !window.FB) return;
+                const { db, appId, doc, onSnapshot } = window.FB;
+                const docRef = doc(db, 'artifacts', appId, 'users', user.uid, 'settings', 'drinkData');
+                const unsub = onSnapshot(docRef, (snap) => {
+                    if (snap.exists()) setRecords(snap.data().records || {});
+                }, (err) => console.error("Firestore Error:", err));
+                return () => unsub();
+            }, [user]);
+
+            const saveToCloud = async (newRecords) => {
+                if (!user || !window.FB) return;
+                const { db, appId, doc, setDoc } = window.FB;
+                const docRef = doc(db, 'artifacts', appId, 'users', user.uid, 'settings', 'drinkData');
+                await setDoc(docRef, { records: newRecords });
+            };
+
+            const formatDate = (date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+
+            const changeMonth = (offset) => {
+                const nextDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + offset, 1);
+                setCurrentMonth(nextDate);
+            };
+
+            const monthlyStats = useMemo(() => {
+                const year = currentMonth.getFullYear();
+                const month = currentMonth.getMonth() + 1;
+                const prefix = `${year}-${String(month).padStart(2, '0')}`;
+                let cups = 0, cost = 0;
+                const shops = {};
+                Object.keys(records).forEach(d => {
+                    if (d.startsWith(prefix)) {
+                        records[d].forEach(r => {
+                            cups++;
+                            cost += Number(r.price) || 0;
+                            if (r.shopName) shops[r.shopName] = (shops[r.shopName] || 0) + 1;
+                        });
+                    }
+                });
+                const fav = Object.entries(shops).sort((a,b) => b[1]-a[1])[0]?.[0] || '無紀錄';
+                return { cups, cost, fav };
+            }, [records, currentMonth]);
+
+            const handleSave = (dateStr, drinks) => {
+                let updated = { ...records, [dateStr]: drinks };
+                drinks.forEach(d => {
+                    if (d.continueTomorrow) {
+                        const next = new Date(dateStr);
+                        next.setDate(next.getDate() + 1);
+                        const nStr = formatDate(next);
+                        if (next.getFullYear() === 2026) {
+                            const nDrinks = updated[nStr] ? [...updated[nStr]] : [];
+                            const isDup = nDrinks.some(x => x.shopName === d.shopName && x.itemName === d.itemName);
+                            if (!isDup && nDrinks.length < 3) {
+                                nDrinks.push({ ...d, price: '', continueTomorrow: false });
+                                updated[nStr] = nDrinks;
+                            }
+                        }
+                    }
+                });
+                setRecords(updated);
+                saveToCloud(updated);
+                setIsModalOpen(false);
+            };
+
+            const calendarDays = useMemo(() => {
+                const year = currentMonth.getFullYear();
+                const month = currentMonth.getMonth();
+                const first = new Date(year, month, 1).getDay();
+                const total = new Date(year, month + 1, 0).getDate();
+                const days = [];
+                for (let i = 0; i < first; i++) days.push(null);
+                for (let d = 1; d <= total; d++) days.push(new Date(year, month, d));
+                return days;
+            }, [currentMonth]);
+
+            return (
+                <div className="max-w-4xl mx-auto p-4 py-8 relative">
+                    <div className="fixed top-10 left-10 float-element opacity-20 pointer-events-none"><IconStar className="w-20 h-20 text-[#FFF9E6]" fill="#FFF9E6" /></div>
+                    <div className="fixed bottom-20 right-10 float-element opacity-20 pointer-events-none" style={{animationDelay: '1s'}}><IconHeart className="w-24 h-24 text-[#FDE2E4]" fill="#FDE2E4" /></div>
+
+                    <div className="glass-panel rounded-[50px] shadow-2xl overflow-hidden border-[10px] border-white/60">
+                        {/* Header */}
+                        <div className="p-8 md:p-12 flex flex-col md:flex-row justify-between items-center gap-6">
+                            <div className="flex flex-col items-center md:items-start group">
+                                <h1 className="text-4xl font-black text-[#B2A4B8] flex items-center gap-4 tracking-tighter italic">
+                                    <IconBoba className="w-14 h-14 text-[#D1C4D4] group-hover:scale-110 transition-transform duration-500" /> 是有多愛喝
+                                </h1>
+                                <p className="text-[10px] font-black text-[#D1C4D4] tracking-[0.3em] ml-2 mt-1">2026 DRINK TRACKER</p>
+                            </div>
+                            
+                            <div className="flex items-center gap-8 bg-white/50 px-8 py-3 rounded-full border border-white/80 shadow-inner">
+                                <button onClick={() => changeMonth(-1)} className="w-10 h-10 flex items-center justify-center hover:scale-125 transition-transform bg-white/40 rounded-full text-[#B2A4B8] font-bold">&lt;</button>
+                                <div className="text-center min-w-[100px]">
+                                    <span className="text-2xl font-black text-[#94849A] block leading-none">{currentMonth.getFullYear()}</span>
+                                    <span className="text-sm font-bold text-[#B2A4B8]">{currentMonth.getMonth() + 1}月</span>
+                                </div>
+                                <button onClick={() => changeMonth(1)} className="w-10 h-10 flex items-center justify-center hover:scale-125 transition-transform bg-white/40 rounded-full text-[#B2A4B8] font-bold">&gt;</button>
+                            </div>
+                        </div>
+
+                        {/* Stats Panel */}
+                        <div className="px-10 grid grid-cols-1 md:grid-cols-3 gap-5 mb-10">
+                            <div className="bg-[#FDE2E4]/25 p-5 rounded-[35px] border border-[#FDE2E4]/40 flex flex-col items-center justify-center">
+                                <p className="text-[9px] font-black uppercase tracking-widest text-[#C19EA3] mb-1">Monthly Total</p>
+                                <p className="text-3xl font-black text-[#E5A7AF]">{monthlyStats.cups} 杯</p>
+                            </div>
+                            <div className="bg-[#F3E5F5]/25 p-5 rounded-[35px] border border-[#F3E5F5]/40 flex flex-col items-center justify-center">
+                                <p className="text-[9px] font-black uppercase tracking-widest text-[#A696AF] mb-1">Expense</p>
+                                <p className="text-3xl font-black text-[#B39DDB]">${monthlyStats.cost}</p>
+                            </div>
+                            <div className="bg-[#FDFBF2]/40 p-5 rounded-[35px] border border-[#FFF9E6]/40 flex flex-col items-center justify-center">
+                                <p className="text-[9px] font-black uppercase tracking-widest text-[#B8B89F] mb-1">Favorite Shop</p>
+                                <p className="text-sm font-black text-[#A3A38E] truncate max-w-full text-center">{monthlyStats.fav}</p>
+                            </div>
+                        </div>
+
+                        {/* Calendar Grid */}
+                        <div className="p-10 pt-0 grid grid-cols-7 gap-3">
+                            {['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'].map(d => <div key={d} className="text-center text-[9px] font-black text-[#D1C4D4] tracking-widest pb-3">{d}</div>)}
+                            {calendarDays.map((d, i) => {
+                                if (!d) return <div key={`e-${i}`} className="h-28" />;
+                                const s = formatDate(d);
+                                const rs = records[s] || [];
+                                
+                                let bgClass = 'bg-white/40';
+                                if (rs.length === 1) bgClass = 'bg-[#FDE2E4]/20';
+                                else if (rs.length === 2) bgClass = 'bg-[#FDE2E4]/40';
+                                else if (rs.length >= 3) bgClass = 'bg-[#F8BBD0]/30';
+
+                                return (
+                                    <button 
+                                        key={s} 
+                                        onClick={() => { setSelectedDate(d); setIsModalOpen(true); }} 
+                                        className={`h-28 rounded-[35px] border-2 border-white/40 flex flex-col p-3 transition-all hover:scale-105 hover:bg-white/90 hover:shadow-xl group relative overflow-hidden ${bgClass}`}
+                                    >
+                                        <span className="text-[11px] font-black text-[#B2A4B8] group-hover:text-[#94849A] relative z-10">{d.getDate()}</span>
+                                        <div className="mt-2 space-y-1 w-full relative z-10">
+                                            {rs.map((r, idx) => {
+                                                // 根據日期和索引生成一個確定的隨機數 (用於選擇圖示)
+                                                const iconIndex = (d.getDate() + idx) % RandomIcons.length;
+                                                const IconComponent = RandomIcons[iconIndex];
+                                                return (
+                                                    <div key={idx} className="flex items-center gap-1 text-[8px] bg-white/70 rounded-full px-2 py-0.5 truncate font-bold text-[#94849A] border border-white/60 shadow-sm animate-in slide-in-from-left-2">
+                                                        <IconComponent className="w-2 h-2 text-[#E5A7AF] shrink-0" />
+                                                        <span className="truncate">{r.itemName || '飲品'}</span>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                        {/* 背景裝飾圖示：僅當有紀錄時顯示一個大圖示在右下角 */}
+                                        {rs.length > 0 && (
+                                            <div className="absolute -bottom-1 -right-1 opacity-10 group-hover:opacity-20 transition-opacity">
+                                                {React.createElement(RandomIcons[d.getDate() % RandomIcons.length], { className: "w-10 h-10" })}
+                                            </div>
+                                        )}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    {/* Editor Modal */}
+                    {isModalOpen && selectedDate && (
+                        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#F8F2FC]/50 backdrop-blur-xl">
+                            <div className="bg-white/95 w-full max-w-xl max-h-[90vh] overflow-y-auto rounded-[50px] shadow-3xl p-10 border-[10px] border-white animate-in zoom-in-95 duration-300">
+                                <div className="flex justify-between items-center mb-8">
+                                    <div className="flex items-center gap-3">
+                                        <div className="bg-[#FAF7FD] p-3 rounded-2xl"><IconBoba className="w-8 h-8 text-[#B2A4B8]" /></div>
+                                        <h2 className="text-3xl font-black text-[#B2A4B8] italic">{formatDate(selectedDate)}</h2>
+                                    </div>
+                                    <button onClick={() => setIsModalOpen(false)} className="w-12 h-12 rounded-full bg-[#FAF7FD] flex items-center justify-center text-[#B2A4B8] hover:bg-[#FDE2E4] hover:text-white transition-colors">?</button>
+                                </div>
+                                <DrinkEditor initialDrinks={records[formatDate(selectedDate)] || []} onSave={(drinks) => handleSave(formatDate(selectedDate), drinks)} />
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        function DrinkEditor({ initialDrinks, onSave }) {
+            const [drinks, setDrinks] = useState(initialDrinks);
+            const add = () => drinks.length < 3 && setDrinks([...drinks, { shopName: '', itemName: '', price: '', size: '中杯', ice: '正常冰', sugar: '微糖', continueTomorrow: false }]);
+            const up = (i, f, v) => { const n = [...drinks]; n[i][f] = v; setDrinks(n); };
+
+            return (
+                <div className="space-y-8">
+                    {drinks.map((d, i) => (
+                        <div key={i} className="bg-[#FDFBFD] p-8 rounded-[40px] border-2 border-[#F8F2FC] relative shadow-inner">
+                            <button onClick={() => setDrinks(drinks.filter((_, idx) => idx !== i))} className="absolute -top-3 -right-3 w-10 h-10 bg-white border-2 border-[#F8F2FC] rounded-full flex items-center justify-center text-[#D1C4D4] hover:text-red-300 transition-colors shadow-sm font-bold">?</button>
+                            
+                            <div className="grid grid-cols-2 gap-5 mb-5">
+                                <div className="space-y-2">
+                                    <p className="text-[9px] font-black text-[#D1C4D4] tracking-widest uppercase ml-2">Shop</p>
+                                    <input className="w-full p-4 bg-white rounded-2xl border border-[#F8F2FC] outline-none text-sm font-bold placeholder-[#D1C4D4] focus:ring-2 ring-[#E2F0FB]/50" placeholder="店家名稱" value={d.shopName} onChange={e => up(i, 'shopName', e.target.value)} />
+                                </div>
+                                <div className="space-y-2">
+                                    <p className="text-[9px] font-black text-[#D1C4D4] tracking-widest uppercase ml-2">Item</p>
+                                    <input className="w-full p-4 bg-white rounded-2xl border border-[#F8F2FC] outline-none text-sm font-bold placeholder-[#D1C4D4] focus:ring-2 ring-[#E2F0FB]/50" placeholder="想喝什麼？" value={d.itemName} onChange={e => up(i, 'itemName', e.target.value)} />
+                                </div>
+                            </div>
+                            
+                            <div className="grid grid-cols-2 gap-5 mb-5">
+                                <div className="space-y-2">
+                                    <p className="text-[9px] font-black text-[#D1C4D4] tracking-widest uppercase ml-2">Price</p>
+                                    <input type="number" className="w-full p-4 bg-white rounded-2xl border border-[#F8F2FC] outline-none text-sm font-bold" placeholder="NT$" value={d.price} onChange={e => up(i, 'price', e.target.value)} />
+                                </div>
+                                <div className="space-y-2">
+                                    <p className="text-[9px] font-black text-[#D1C4D4] tracking-widest uppercase ml-2">Size</p>
+                                    <div className="flex gap-2">
+                                        {['中杯', '大杯'].map(s => (
+                                            <button key={s} onClick={() => up(i, 'size', s)} className={`flex-1 py-4 rounded-2xl text-xs font-black transition-all ${d.size === s ? 'bg-[#E2F0FB] text-[#7895B2] shadow-sm' : 'bg-white text-[#D1C4D4] border border-[#F8F2FC]'}`}>{s}</button>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="mb-5 space-y-2">
+                                <p className="text-[9px] font-black text-[#D1C4D4] tracking-widest uppercase ml-2">Ice Level</p>
+                                <div className="flex flex-wrap gap-2">
+                                    {ICE_OPTIONS.map(o => (
+                                        <button key={o} onClick={() => up(i, 'ice', o)} className={`px-4 py-2.5 rounded-xl text-[10px] font-black transition-all ${d.ice === o ? 'bg-[#E2F0FB] text-[#7895B2] border-[#E2F0FB]' : 'bg-white text-[#D1C4D4] border border-[#F8F2FC]'}`}>{o}</button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div className="mb-6 space-y-2">
+                                <p className="text-[9px] font-black text-[#D1C4D4] tracking-widest uppercase ml-2">Sugar Level</p>
+                                <div className="flex flex-wrap gap-2">
+                                    {SUGAR_OPTIONS.map(o => (
+                                        <button key={o} onClick={() => up(i, 'sugar', o)} className={`px-4 py-2.5 rounded-xl text-[10px] font-black transition-all ${d.sugar === o ? 'bg-[#F3E5F5] text-[#A696AF] border-[#F3E5F5]' : 'bg-white text-[#D1C4D4] border border-[#F8F2FC]'}`}>{o}</button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <label className="flex items-center gap-3 cursor-pointer p-4 bg-white rounded-2xl border border-[#F8F2FC] group">
+                                <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all ${d.continueTomorrow ? 'bg-[#FDE2E4] border-[#FDE2E4]' : 'bg-white border-[#F8F2FC]'}`}>
+                                    {d.continueTomorrow && <IconHeart fill="white" className="w-4 h-4 text-white" />}
+                                </div>
+                                <input type="checkbox" className="hidden" checked={d.continueTomorrow} onChange={e => up(i, 'continueTomorrow', e.target.checked)} /> 
+                                <span className="text-xs font-black text-[#B2A4B8] group-hover:text-[#FDE2E4]">明天繼續喝</span>
+                            </label>
+                        </div>
+                    ))}
+
+                    {drinks.length < 3 && (
+                        <button onClick={add} className="w-full py-8 border-4 border-dashed border-[#F8F2FC] rounded-[40px] text-[#D1C4D4] font-black hover:bg-[#FAF7FD] hover:text-[#B2A4B8] transition-all flex flex-col items-center gap-2">
+                            <span className="text-3xl">＋</span>
+                            <span className="text-[10px] tracking-widest uppercase">Add Another Cup</span>
+                        </button>
+                    )}
+
+                    <button 
+                        onClick={() => onSave(drinks)} 
+                        className="w-full py-5 bg-[#FDE2E4] text-[#C19EA3] rounded-[25px] font-black text-lg shadow-xl shadow-[#FDE2E4]/40 btn-hover-sparkle transition-all active:scale-95"
+                    >
+                        儲存
+                    </button>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
