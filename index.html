@@ -65,8 +65,9 @@
         const db = getFirestore(app);
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'drink-tracker-2026';
 
-        // 導出全域物件供 React 使用，確保函式可用
+        // 強制掛載到 window，確保 React 可以讀取到
         window.FB = { db, auth, appId, doc, setDoc, onSnapshot, signInAnonymously, signInWithCustomToken, onAuthStateChanged };
+        console.log("Firebase initialized and attached to window.");
     </script>
 
     <script type="text/babel">
@@ -96,45 +97,63 @@
             const [records, setRecords] = useState({});
             const [selectedDate, setSelectedDate] = useState(null);
             const [isModalOpen, setIsModalOpen] = useState(false);
+            const [isReady, setIsReady] = useState(false);
 
-            // 需求 5: Firebase 驗證邏輯
+            // 1. 等待 Firebase 初始化
             useEffect(() => {
-                const checkFB = setInterval(() => {
-                    if (window.FB) {
-                        clearInterval(checkFB);
+                const timer = setInterval(() => {
+                    if (window.FB && window.FB.auth) {
+                        setIsReady(true);
+                        clearInterval(timer);
+                        
                         const { auth, onAuthStateChanged, signInAnonymously, signInWithCustomToken } = window.FB;
+                        
                         const initAuth = async () => {
                             try {
                                 if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
                                     await signInWithCustomToken(auth, __initial_auth_token);
-                                } else { await signInAnonymously(auth); }
-                            } catch(e) { console.error("Auth init error:", e); }
+                                } else {
+                                    await signInAnonymously(auth);
+                                }
+                            } catch (e) {
+                                console.error("Auth failed:", e);
+                            }
                         };
                         initAuth();
                         onAuthStateChanged(auth, setUser);
                     }
-                }, 100);
+                }, 200);
+                return () => clearInterval(timer);
             }, []);
 
-            // 需求 5: 數據即時監聽
+            // 2. 監聽數據 (符合 Rule 1 的路徑)
             useEffect(() => {
-                if (!user || !window.FB) return;
+                if (!user || !isReady || !window.FB) return;
+                
                 const { db, appId, doc, onSnapshot } = window.FB;
-                const docRef = doc(db, 'artifacts', appId, 'users', user.uid, 'settings', 'drinkData');
+                // 注意：路徑必須嚴格遵循 /artifacts/{appId}/users/{userId}/{collectionName}
+                const docRef = doc(db, 'artifacts', appId, 'users', user.uid, 'userRecords', 'drinkData');
+                
                 const unsub = onSnapshot(docRef, (snap) => {
-                    if (snap.exists()) setRecords(snap.data().records || {});
-                }, (err) => console.error("Snapshot error:", err));
+                    if (snap.exists()) {
+                        setRecords(snap.data().records || {});
+                    }
+                }, (err) => {
+                    console.error("Firestore Error:", err);
+                });
                 return () => unsub();
-            }, [user]);
+            }, [user, isReady]);
 
-            const saveToCloud = async (newRecords) => {
-                if (!user || !window.FB) return;
+            // 3. 儲存數據
+            const saveToCloud = async (updatedRecords) => {
+                if (!user || !isReady || !window.FB) return;
                 try {
                     const { db, appId, doc, setDoc } = window.FB;
-                    const docRef = doc(db, 'artifacts', appId, 'users', user.uid, 'settings', 'drinkData');
-                    await setDoc(docRef, { records: newRecords });
+                    const docRef = doc(db, 'artifacts', appId, 'users', user.uid, 'userRecords', 'drinkData');
+                    await setDoc(docRef, { records: updatedRecords }, { merge: true });
+                    console.log("Saved successfully");
                 } catch (e) {
-                    console.error("Save error:", e);
+                    console.error("Save Error:", e);
                 }
             };
 
@@ -190,6 +209,27 @@
                 return days;
             }, [currentMonth]);
 
+            const monthlyStats = useMemo(() => {
+                const prefix = `${currentMonth.getFullYear()}-${String(currentMonth.getMonth() + 1).padStart(2, '0')}`;
+                let cups = 0, cost = 0;
+                Object.keys(records).forEach(d => {
+                    if (d.startsWith(prefix)) {
+                        (records[d] || []).forEach(r => {
+                            if (!r.isContinued) cups++;
+                            cost += Number(r.price) || 0;
+                        });
+                    }
+                });
+                return { cups, cost };
+            }, [records, currentMonth]);
+
+            if (!isReady) {
+                return (
+                    <div className="flex items-center justify-center min-h-screen">
+                        <div className="animate-pulse text-[#D1C4D4] font-bold">載入中...</div>
+                    </div>
+                );
+            }
             return (
                 <div className="max-w-md mx-auto min-h-screen p-2 pt-4 pb-20">
                     <div className="glass-panel rounded-[40px] shadow-2xl overflow-hidden border-4 border-white relative z-10">
@@ -365,4 +405,3 @@
     </script>
 </body>
 </html>
-
