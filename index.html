@@ -44,16 +44,14 @@
 
     <script type="module">
         // 需求 5: Firebase 初始化與雲端儲存設定
-  	// Import the functions you need from the SDKs you need
- 	 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
-	 import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-auth.js";
-	 import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-firestore.js";
- 	 // TODO: Add SDKs for Firebase products that you want to use
-  	// https://firebase.google.com/docs/web/setup#available-libraries
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-auth.js";
+        import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-firestore.js";
 
-  	// Your web app's Firebase configuration
-  	// For Firebase JS SDK v7.20.0 and later, measurementId is optional
- 	const firebaseConfig = {
+        // 修正點：移除 getAnalytics 引用，防止儲存時報錯導致空白頁
+        const firebaseConfig = typeof __firebase_config !== 'undefined' 
+            ? JSON.parse(__firebase_config) 
+            : {
  	   apiKey: "AIzaSyCFnYhdOMJNAxCnVoUDxDtAItKQjURd14w",
  	   authDomain: "drinks-4eb2c.firebaseapp.com",
    	   projectId: "drinks-4eb2c",
@@ -63,12 +61,12 @@
     	   measurementId: "G-2NMHKGMR9X"
   	};
 
-  	// Initialize Firebase
-  	const app = initializeApp(firebaseConfig);
+        const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'drink-tracker-2026';
 
+        // 導出全域物件供 React 使用，確保函式可用
         window.FB = { db, auth, appId, doc, setDoc, onSnapshot, signInAnonymously, signInWithCustomToken, onAuthStateChanged };
     </script>
 
@@ -100,16 +98,18 @@
             const [selectedDate, setSelectedDate] = useState(null);
             const [isModalOpen, setIsModalOpen] = useState(false);
 
-            // 需求 5: Firebase 驗證
+            // 需求 5: Firebase 驗證邏輯
             useEffect(() => {
                 const checkFB = setInterval(() => {
                     if (window.FB) {
                         clearInterval(checkFB);
                         const { auth, onAuthStateChanged, signInAnonymously, signInWithCustomToken } = window.FB;
                         const initAuth = async () => {
-                            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                                await signInWithCustomToken(auth, __initial_auth_token);
-                            } else { await signInAnonymously(auth); }
+                            try {
+                                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                                    await signInWithCustomToken(auth, __initial_auth_token);
+                                } else { await signInAnonymously(auth); }
+                            } catch(e) { console.error("Auth init error:", e); }
                         };
                         initAuth();
                         onAuthStateChanged(auth, setUser);
@@ -117,34 +117,38 @@
                 }, 100);
             }, []);
 
-            // 需求 5: 數據同步
+            // 需求 5: 數據即時監聽
             useEffect(() => {
                 if (!user || !window.FB) return;
                 const { db, appId, doc, onSnapshot } = window.FB;
                 const docRef = doc(db, 'artifacts', appId, 'users', user.uid, 'settings', 'drinkData');
                 const unsub = onSnapshot(docRef, (snap) => {
                     if (snap.exists()) setRecords(snap.data().records || {});
-                }, (err) => console.error(err));
+                }, (err) => console.error("Snapshot error:", err));
                 return () => unsub();
             }, [user]);
 
             const saveToCloud = async (newRecords) => {
                 if (!user || !window.FB) return;
-                const { db, appId, doc, setDoc } = window.FB;
-                const docRef = doc(db, 'artifacts', appId, 'users', user.uid, 'settings', 'drinkData');
-                await setDoc(docRef, { records: newRecords });
+                try {
+                    const { db, appId, doc, setDoc } = window.FB;
+                    const docRef = doc(db, 'artifacts', appId, 'users', user.uid, 'settings', 'drinkData');
+                    await setDoc(docRef, { records: newRecords });
+                } catch (e) {
+                    console.error("Save error:", e);
+                }
             };
 
             const formatDate = (date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 
-            // 需求 8 & 14 & 19: 智慧統計 (排除延續飲用藍點杯數)
+            // 需求 8 & 14 & 19: 智慧統計 (不計藍點延續杯數)
             const monthlyStats = useMemo(() => {
                 const prefix = `${currentMonth.getFullYear()}-${String(currentMonth.getMonth() + 1).padStart(2, '0')}`;
                 let cups = 0, cost = 0;
                 const shops = {};
                 Object.keys(records).forEach(d => {
                     if (d.startsWith(prefix)) {
-                        records[d].forEach(r => {
+                        (records[d] || []).forEach(r => {
                             if (!r.isContinued) cups++; 
                             cost += Number(r.price) || 0;
                             if (r.shopName) shops[r.shopName] = (shops[r.shopName] || 0) + 1;
@@ -154,7 +158,7 @@
                 return { cups, cost, fav: Object.entries(shops).sort((a,b) => b[1]-a[1])[0]?.[0] || '無' };
             }, [records, currentMonth]);
 
-            // 需求 9: 明天也要喝複刻邏輯
+            // 需求 9: 明天繼續喝邏輯
             const handleSave = (dateStr, drinks) => {
                 let updated = { ...records, [dateStr]: drinks };
                 drinks.forEach(d => {
@@ -191,7 +195,7 @@
                 <div className="max-w-md mx-auto min-h-screen p-2 pt-4 pb-20">
                     <div className="glass-panel rounded-[40px] shadow-2xl overflow-hidden border-4 border-white relative z-10">
                         
-                        {/* 需求 11: Header */}
+			{/* 需求 11: Header */}
                         <div className="p-6 flex flex-col items-center gap-4">
                             <h1 className="text-3xl font-black text-[#B2A4B8] flex items-center gap-2 italic tracking-tighter">
                                 <IconBoba className="w-10 h-10 text-[#D1C4D4]" /> 多愛喝
@@ -209,15 +213,15 @@
                         {/* 需求 12: 統計卡片 */}
                         <div className="px-6 grid grid-cols-3 gap-2 mb-6">
                             <div className="bg-[#FDE2E4]/30 p-3 rounded-2xl text-center border border-white/50">
-                                <p className="text-[8px] font-bold text-[#C19EA3] uppercase tracking-wider">本月杯數</p>
+                                <p className="text-[8px] font-bold text-[#C19EA3] uppercase">本月杯數</p>
                                 <p className="text-lg font-black text-[#E5A7AF]">{monthlyStats.cups}</p>
                             </div>
                             <div className="bg-[#F3E5F5]/30 p-3 rounded-2xl text-center border border-white/50">
-                                <p className="text-[8px] font-bold text-[#A696AF] uppercase tracking-wider">本月花費</p>
+                                <p className="text-[8px] font-bold text-[#A696AF]">本月花費</p>
                                 <p className="text-lg font-black text-[#B39DDB]">${monthlyStats.cost}</p>
                             </div>
                             <div className="bg-[#FFF9E6]/30 p-3 rounded-2xl text-center border border-white/50">
-                                <p className="text-[8px] font-bold text-[#B8B89F] uppercase tracking-wider">最常喝</p>
+                                <p className="text-[8px] font-bold text-[#B8B89F]">最常喝</p>
                                 <p className="text-[10px] font-black text-[#A3A38E] truncate">{monthlyStats.fav}</p>
                             </div>
                         </div>
@@ -234,7 +238,7 @@
                                 const realCount = rs.filter(r => !r.isContinued).length;
                                 const colorClass = realCount === 0 ? 'bg-cup-0' : (realCount === 1 ? 'bg-cup-1' : (realCount === 2 ? 'bg-cup-2' : 'bg-cup-3'));
                                 
-                                // 需求 18 & 20: 隨機可愛圖示 (根據日期分配)
+                                // 需求 20: 隨機可愛圖示 (根據日期分配)
                                 const IconComp = CuteIcons[d.getDate() % CuteIcons.length];
 
                                 return (
@@ -243,20 +247,19 @@
                                         onClick={() => { setSelectedDate(d); setIsModalOpen(true); }} 
                                         className={`calendar-cell rounded-xl border border-white/50 flex flex-col p-1 overflow-hidden shadow-sm hover:shadow-md ${colorClass}`}
                                     >
-                                        {/* 日期與隨機圖示層 */}
+					{/* 日期與隨機圖示層 */}
                                         <div className="flex justify-between items-start w-full relative z-10">
-                                            <span className="text-[9px] font-black text-[#94849A] opacity-70">{d.getDate()}</span>
-                                            {/* 需求 20: 圖示顯示於格內 */}
+                                            <span className="text-[9px] font-black text-[#94849A]">{d.getDate()}</span>
+                                            {/* 需求 20: 隨機圖示展示 */}
                                             <div className="text-[#B2A4B8] opacity-30">
                                                 {IconComp({className: "w-3 h-3"})}
                                             </div>
                                         </div>
 
-                                        {/* 需求 19: 飲品名稱與藍點標記 */}
                                         <div className="flex flex-col gap-0.5 mt-1 w-full overflow-hidden relative z-20">
+                                            {/* 需求 19: 日曆格內顯示品名與藍點 */}
                                             {rs.map((r, idx) => (
                                                 <div key={idx} className="flex items-center gap-0.5 bg-white/40 rounded-sm px-1 py-0.5 min-w-0">
-                                                    {/* 需求 19: 延續飲用藍點 */}
                                                     {r.isContinued && <div className="w-1 h-1 rounded-full bg-blue-400 shrink-0 shadow-sm"></div>}
                                                     <span className="text-[7px] font-bold text-[#94849A] truncate leading-none">
                                                         {r.itemName || '飲品'}
@@ -276,14 +279,14 @@
                         </div>
                     </div>
 
-                    {/* 需求 15: 編輯彈窗 */}
+                    {/* 需求 15: 沉浸式編輯彈窗 */}
                     {isModalOpen && selectedDate && (
                         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm px-0">
                             <div className="bg-white w-full max-w-md h-[92vh] overflow-y-auto rounded-t-[40px] sm:rounded-[40px] p-6 pb-12 shadow-2xl animate-pop">
                                 <div className="flex justify-between items-center mb-6">
                                     <div className="flex flex-col">
                                         <h2 className="text-2xl font-black text-[#B2A4B8] italic">{formatDate(selectedDate)}</h2>
-                                        <span className="text-[10px] font-bold text-[#D1C4D4] tracking-widest uppercase">Sweet Record</span>
+                                        <span className="text-[10px] font-bold text-[#D1C4D4] tracking-widest uppercase">Recording Sweetness</span>
                                     </div>
                                     <button onClick={() => setIsModalOpen(false)} className="w-10 h-10 rounded-full bg-[#FAF7FD] flex items-center justify-center font-bold text-[#B2A4B8]">✕</button>
                                 </div>
@@ -298,7 +301,7 @@
             );
         }
 
-        // 需求 16: 飲品編輯細節
+        // 需求 16: 飲品編輯
         function DrinkEditor({ initialDrinks, onSave }) {
             const [drinks, setDrinks] = useState(initialDrinks);
             const add = () => drinks.length < 3 && setDrinks([...drinks, { shopName: '', itemName: '', price: '', size: '中杯', ice: '去冰', sugar: '微糖', continueTomorrow: false, isContinued: false }]);
@@ -310,7 +313,7 @@
                         <div key={i} className={`p-5 rounded-3xl border-2 relative ${d.isContinued ? 'bg-blue-50/40 border-blue-100' : 'bg-[#FDFBFD] border-[#F8F2FC]'}`}>
                             <button onClick={() => setDrinks(drinks.filter((_, idx) => idx !== i))} className="absolute top-4 right-4 text-[#D1C4D4]">✕</button>
                             
-                            {d.isContinued && <div className="text-[8px] font-black text-blue-400 mb-2 uppercase tracking-tighter italic">Continued Drink (Not Counted)</div>}
+                            {d.isContinued && <div className="text-[8px] font-black text-blue-400 mb-2 uppercase italic tracking-tighter">Continued Drink (Not Counted)</div>}
                             
                             <div className="grid grid-cols-2 gap-3 mb-4">
                                 <input className="p-3 bg-white rounded-xl border border-[#F8F2FC] font-bold text-sm outline-none" placeholder="店家" value={d.shopName} onChange={e => up(i, 'shopName', e.target.value)} />
@@ -328,7 +331,7 @@
 
                             <div className="mb-4">
                                 <div className="flex flex-wrap gap-1.5">
-                                    {['正常冰', '少冰', '微冰', '去冰', '常溫', '熱'].map(l => (
+                                    {['正常冰', '少冰', '微冰', '去冰', '常溫', '熱', '無法調整'].map(l => (
                                         <button key={l} onClick={() => up(i, 'ice', l)} className={`px-3 py-1.5 text-[9px] font-bold rounded-xl border ${d.ice === l ? 'bg-[#E2F0FB] text-[#7895B2] border-[#E2F0FB]' : 'bg-white border-[#F8F2FC]'}`}>{l}</button>
                                     ))}
                                 </div>
