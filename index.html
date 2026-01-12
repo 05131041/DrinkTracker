@@ -1,25 +1,38 @@
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
+    <!-- 指定網頁字元編碼為 UTF-8，確保繁體中文不亂碼 -->
     <meta charset="UTF-8">
+    <!-- 設定響應式視窗屬性，讓網頁在不同裝置上都能正確縮放 -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- 網頁頁籤上顯示的標題 -->
     <title>是多愛喝 2026</title>
+    <!-- 從 CDN 引入 React 核心庫 (版本 18) -->
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <!-- 引入 React DOM 庫，用於渲染組件到瀏覽器 -->
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <!-- 引入 Babel 用於在客戶端解析 JSX 語法 -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- 引入 Tailwind CSS 框架，提供實用的樣式類別 -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 引入思源黑體 (Noto Sans TC)，提供美觀的繁體中文顯示 -->
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&display=swap" rel="stylesheet">
     <style>
+        /* 設定全域字體優先順序 */
         body { font-family: 'Noto Sans TC', sans-serif; }
+        /* 夢幻漸層背景樣式 */
         .dreamy-gradient {
             background: linear-gradient(135deg, #FDFBFD 0%, #F8F2FC 100%);
         }
+        /* 定義上下飄浮與旋轉的動畫效果 */
         @keyframes float {
             0% { transform: translateY(0px) rotate(0deg); }
             50% { transform: translateY(-20px) rotate(5deg); }
             100% { transform: translateY(0px) rotate(0deg); }
         }
+        /* 套用飄浮動畫到指定類別 */
         .float-element { animation: float 8s ease-in-out infinite; }
+        /* 毛玻璃面板效果（半透明背景加模糊） */
         .glass-panel {
             background: rgba(255, 255, 255, 0.7);
             backdrop-filter: blur(20px);
@@ -29,7 +42,7 @@
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #E2F0FB; border-radius: 10px; }
-        
+        /* 按鈕懸停時的微調與陰影光澤 */        
         .btn-hover-sparkle:hover {
             box-shadow: 0 0 15px rgba(253, 226, 228, 0.8);
             transform: scale(1.02);
@@ -37,15 +50,17 @@
     </style>
 </head>
 <body class="dreamy-gradient min-h-screen text-[#94849A]">
+    <!-- React 應用程式的渲染根目錄 -->
     <div id="root"></div>
 
-    <!-- Firebase SDKs -->
+    <!-- Firebase 模組化設定腳本 -->
     <script type="module">
+        // 匯入 Firebase SDK 的必要功能
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-auth.js";
         import { getFirestore, doc, setDoc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-firestore.js";
 
-        // Firebase 配置
+        // Firebase 資料庫連線配置
         const firebaseConfig = typeof __firebase_config !== 'undefined' 
             ? JSON.parse(__firebase_config) 
             : { 
@@ -57,12 +72,14 @@
                 appId: "1:394916838880:web:ebe01d2df44542f0347f85" 
             };
 
+        // 初始化 Firebase 實例
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
+        // 獲取應用程式識別碼，確保資料路徑正確
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'drink-tracker-2026';
 
-        // 將必要工具掛載至 window 物件供 React 使用
+        // 將 Firebase 工具掛載到 window 全域物件，方便 React 調用
         window.FB = { 
             db, 
             auth, 
@@ -77,10 +94,12 @@
         };
     </script>
 
+    <!-- React 邏輯實作 (JSX) -->
     <script type="text/babel">
+        // 從 React 物件解構出 Hook
         const { useState, useEffect, useMemo } = React;
 
-        // 可愛的主圖示：珍奶
+        // 珍珠奶茶圖標圖組件 (使用 SVG)
         const IconBoba = ({className}) => (
             <svg className={className} viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M18 14L22 52C22 55.3137 24.6863 58 28 58H36C39.3137 58 42 55.3137 42 52L46 14" stroke="currentColor" strokeWidth="3" strokeLinecap="round"/>
@@ -114,17 +133,26 @@
         const IconHeart = ({fill, className}) => <svg className={className} fill={fill || "none"} stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>;
         const IconStar = ({fill, className}) => <svg className={className} fill={fill || "none"} stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.382-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"></path></svg>;
 
+        // 定義表單中使用的固定選項常數
         const ICE_OPTIONS = ['正常冰', '少冰', '微冰', '去冰', '常溫', '熱', '無法調整'];
         const SUGAR_OPTIONS = ['半糖', '微糖', '一分糖', '無糖', '無法調整'];
 
+        // 主應用程式組件
         function App() {
+            // 使用者認證狀態
             const [user, setUser] = useState(null);
+            // 當前月曆顯示的月份
             const [currentMonth, setCurrentMonth] = useState(new Date(2026, 0, 1));
+            // 從資料庫同步的飲水紀錄
             const [records, setRecords] = useState({});
+            // 使用者點選的特定日期物件
             const [selectedDate, setSelectedDate] = useState(null);
+            // 編輯彈窗的開關狀態
             const [isModalOpen, setIsModalOpen] = useState(false);
+            // 資料載入進度標記
             const [loading, setLoading] = useState(true);
 
+            // 初始副作用：處理 Firebase 登入邏輯
             useEffect(() => {
                 const checkFB = setInterval(() => {
                     if (window.FB) {
@@ -133,6 +161,7 @@
                         
                         const initAuth = async () => {
                             try {
+                                // 優先使用環境提供的 Token 登入，否則匿名登入
                                 if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
                                     await signInWithCustomToken(__initial_auth_token);
                                 } else {
@@ -149,7 +178,7 @@
                 }, 100);
             }, []);
 
-            // 監聽 Firestore 數據
+            // 資料同步副作用：監聽雲端資料庫的變動
             useEffect(() => {
                 if (!user || !window.FB) return;
                 const { db, appId, doc, onSnapshot } = window.FB;
@@ -161,6 +190,7 @@
                 return () => unsub();
             }, [user]);
 
+            // 上傳資料到雲端的非同步函式
             const saveToCloud = async (newRecords) => {
                 if (!user || !window.FB) return;
                 const { db, appId, doc, setDoc } = window.FB;
@@ -169,6 +199,7 @@
                 await setDoc(docRef, { records: newRecords });
             };
 
+            // 將日期物件轉換為 YYYY-MM-DD 字串的格式化函式
             const formatDate = (date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 
             const changeMonth = (offset) => {
@@ -176,6 +207,7 @@
                 setCurrentMonth(nextDate);
             };
 
+            // 計算當月統計數據（快取計算結果，避免不必要的重新計算）
             const monthlyStats = useMemo(() => {
                 const year = currentMonth.getFullYear();
                 const month = currentMonth.getMonth() + 1;
@@ -221,14 +253,15 @@
                 setIsModalOpen(false);
             };
 
+            // 產生當前月曆顯示的日期格陣列
             const calendarDays = useMemo(() => {
                 const year = currentMonth.getFullYear();
                 const month = currentMonth.getMonth();
-                const first = new Date(year, month, 1).getDay();
-                const total = new Date(year, month + 1, 0).getDate();
+                const first = new Date(year, month, 1).getDay(); // 計算月初是星期幾
+                const total = new Date(year, month + 1, 0).getDate(); // 計算當月總天數
                 const days = [];
-                for (let i = 0; i < first; i++) days.push(null);
-                for (let d = 1; d <= total; d++) days.push(new Date(year, month, d));
+                for (let i = 0; i < first; i++) days.push(null); // 月初前的空格
+                for (let d = 1; d <= total; d++) days.push(new Date(year, month, d)); // 每日日期
                 return days;
             }, [currentMonth]);
 
@@ -236,9 +269,9 @@
                 <div className="max-w-4xl mx-auto p-2 md:p-4 py-8 relative">
                     <div className="fixed top-10 left-10 float-element opacity-20 pointer-events-none"><IconStar className="w-20 h-20 text-[#FFF9E6]" fill="#FFF9E6" /></div>
                     <div className="fixed bottom-20 right-10 float-element opacity-20 pointer-events-none" style={{animationDelay: '1s'}}><IconHeart className="w-24 h-24 text-[#FDE2E4]" fill="#FDE2E4" /></div>
-
+                    {/* 主介面外殼 */}
                     <div className="glass-panel rounded-[50px] shadow-2xl overflow-hidden border-[10px] border-white/60">
-                        {/* Header */}
+                        {/* 頂部標題與月份切換列 */}
                         <div className="p-8 md:p-12 flex flex-col md:flex-row justify-between items-center gap-6">
                             <div className="flex flex-col items-center md:items-start group">
                                 <h1 className="text-3xl md:text-4xl font-black text-[#B2A4B8] flex items-center gap-4 tracking-tighter italic">
@@ -257,7 +290,7 @@
                             </div>
                         </div>
 
-                        {/* Stats Panel */}
+                        {/* 統計摘要卡片區 */}
                         <div className="px-10 grid grid-cols-1 md:grid-cols-3 gap-5 mb-10">
                             <div className="bg-[#FDE2E4]/25 p-5 rounded-[35px] border border-[#FDE2E4]/40 flex flex-col items-center justify-center">
                                 <p className="text-[9px] font-black uppercase tracking-widest text-[#C19EA3] mb-1">Monthly Total</p>
@@ -273,13 +306,15 @@
                             </div>
                         </div>
 
-                        {/* Calendar Grid */}
+                        {/* 月曆表格區 */}
                         <div className="p-10 pt-0 grid grid-cols-7 gap-3">
+                            {/* 星期名稱 */}
                             {['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'].map(d => <div key={d} className="text-center text-[9px] font-black text-[#D1C4D4] tracking-widest pb-3">{d}</div>)}
+                            {/* 渲染每一個日期格子 */}
                             {calendarDays.map((d, i) => {
-                                if (!d) return <div key={`e-${i}`} className="h-16 md:h-28" />;
+                                if (!d) return <div key={`e-${i}`} className="h-16 md:h-28" />; // 空格格位
                                 const s = formatDate(d);
-                                const rs = records[s] || [];
+                                const rs = records[s] || []; // 獲取當日紀錄
                                 
                                 let bgClass = 'bg-white/40';
                                 if (rs.length === 1) bgClass = 'bg-[#FDE2E4]/20';
@@ -318,7 +353,7 @@
                         </div>
                     </div>
 
-                    {/* Editor Modal */}
+                    {/* 飲品編輯彈窗組件 */}
                     {isModalOpen && selectedDate && (
                         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#F8F2FC]/50 backdrop-blur-xl">
                             <div className="bg-white/95 w-full max-w-xl max-h-[90vh] overflow-y-auto rounded-[40px] md:rounded-[50px] shadow-3xl p-6 md:p-10 border-4 md:border-[10px] border-white animate-in zoom-in-95 duration-300">
@@ -337,17 +372,22 @@
             );
         }
 
+        // 飲品清單編輯組件
         function DrinkEditor({ initialDrinks, onSave }) {
+            // 初始化飲品狀態，若無舊紀錄則給予一組預設空白值
             const [drinks, setDrinks] = useState(initialDrinks);
+            // 新增一組空白飲品欄位
             const add = () => drinks.length < 3 && setDrinks([...drinks, { shopName: '', itemName: '', price: '', size: '中杯', ice: '正常冰', sugar: '微糖', continueTomorrow: false }]);
             const up = (i, f, v) => { const n = [...drinks]; n[i][f] = v; setDrinks(n); };
 
             return (
                 <div className="space-y-6 md:space-y-8">
+                    {/* 遍歷渲染每一杯飲料的編輯區塊 */}
                     {drinks.map((d, i) => (
                         <div key={i} className="bg-[#FDFBFD] p-6 md:p-8 rounded-[30px] md:rounded-[40px] border-2 border-[#F8F2FC] relative shadow-inner">
                             <button onClick={() => setDrinks(drinks.filter((_, idx) => idx !== i))} className="absolute -top-3 -right-3 w-8 h-8 md:w-10 md:h-10 bg-white border-2 border-[#F8F2FC] rounded-full flex items-center justify-center text-[#D1C4D4] hover:text-red-300 transition-colors shadow-sm font-bold">?</button>
-                            
+
+                            {/* 店家與品項輸入 */}
                             <div className="grid grid-cols-2 gap-3 md:gap-5 mb-5">
                                 <div className="space-y-2">
                                     <p className="text-[9px] font-black text-[#D1C4D4] tracking-widest uppercase ml-2">Shop</p>
@@ -358,7 +398,7 @@
                                     <input className="w-full p-3 md:p-4 bg-white rounded-2xl border border-[#F8F2FC] outline-none text-sm font-bold placeholder-[#D1C4D4] focus:ring-2 ring-[#E2F0FB]/50" placeholder="想喝什麼？" value={d.itemName} onChange={e => up(i, 'itemName', e.target.value)} />
                                 </div>
                             </div>
-                            
+                            {/* 價格與杯量選擇 */}                            
                             <div className="grid grid-cols-2 gap-3 md:gap-5 mb-5">
                                 <div className="space-y-2">
                                     <p className="text-[9px] font-black text-[#D1C4D4] tracking-widest uppercase ml-2">Price</p>
@@ -373,7 +413,7 @@
                                     </div>
                                 </div>
                             </div>
-
+                            {/* 冰塊選項按鈕區 */}
                             <div className="mb-5 space-y-2">
                                 <p className="text-[9px] font-black text-[#D1C4D4] tracking-widest uppercase ml-2">Ice Level</p>
                                 <div className="flex flex-wrap gap-2">
@@ -401,7 +441,7 @@
                             </label>
                         </div>
                     ))}
-
+                    {/* 控制動作按鈕 */}
                     {drinks.length < 3 && (
                         <button onClick={add} className="w-full py-6 md:py-8 border-4 border-dashed border-[#F8F2FC] rounded-[30px] md:rounded-[40px] text-[#D1C4D4] font-black hover:bg-[#FAF7FD] hover:text-[#B2A4B8] transition-all flex flex-col items-center gap-2">
                             <span className="text-2xl md:text-3xl">＋</span>
@@ -419,6 +459,7 @@
             );
         }
 
+        // 啟動 React 渲染流程
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<App />);
     </script>
