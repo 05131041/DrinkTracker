@@ -43,7 +43,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-auth.js";
-        import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-firestore.js";
+        import { getFirestore, doc, setDoc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-firestore.js";
 
         // Firebase 配置
         const firebaseConfig = typeof __firebase_config !== 'undefined' 
@@ -70,7 +70,8 @@
             doc, 
             setDoc, 
             onSnapshot, 
-            signInAnonymously: () => signInAnonymously(auth), // 封裝匿名登入
+            collection,
+            signInAnonymously: () => signInAnonymously(auth),
             signInWithCustomToken: (token) => signInWithCustomToken(auth, token), 
             onAuthStateChanged: (cb) => onAuthStateChanged(auth, cb) 
         };
@@ -113,8 +114,8 @@
         const IconHeart = ({fill, className}) => <svg className={className} fill={fill || "none"} stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>;
         const IconStar = ({fill, className}) => <svg className={className} fill={fill || "none"} stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.382-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"></path></svg>;
 
-        const ICE_OPTIONS = ['正常冰', '少冰', '微冰', '去冰', '常溫', '溫'];
-        const SUGAR_OPTIONS = ['無法調整', '半糖', '微糖', '一分糖', '無糖'];
+        const ICE_OPTIONS = ['正常冰', '少冰', '微冰', '去冰', '常溫', '熱', '無法調整'];
+        const SUGAR_OPTIONS = ['半糖', '微糖', '一分糖', '無糖', '無法調整'];
 
         function App() {
             const [user, setUser] = useState(null);
@@ -122,6 +123,7 @@
             const [records, setRecords] = useState({});
             const [selectedDate, setSelectedDate] = useState(null);
             const [isModalOpen, setIsModalOpen] = useState(false);
+            const [loading, setLoading] = useState(true);
 
             useEffect(() => {
                 const checkFB = setInterval(() => {
@@ -147,6 +149,7 @@
                 }, 100);
             }, []);
 
+            // 監聽 Firestore 數據
             useEffect(() => {
                 if (!user || !window.FB) return;
                 const { db, appId, doc, onSnapshot } = window.FB;
@@ -261,7 +264,7 @@
                                 <p className="text-2xl md:text-3xl font-black text-[#E5A7AF]">{monthlyStats.cups} 杯</p>
                             </div>
                             <div className="bg-[#F3E5F5]/25 p-4 md:p-5 rounded-[25px] md:rounded-[35px] border border-[#F3E5F5]/40 flex flex-col items-center justify-center">
-                                <p className="text-[9px] font-black uppercase tracking-widest text-[#A696AF] mb-1">MONTHLY COST</p>
+                                <p className="text-[9px] font-black uppercase tracking-widest text-[#A696AF] mb-1">Expense</p>
                                 <p className="text-2xl md:text-3xl font-black text-[#B39DDB]">${monthlyStats.cost}</p>
                             </div>
                             <div className="bg-[#FDFBF2]/40 p-4 md:p-5 rounded-[25px] md:rounded-[35px] border border-[#FFF9E6]/40 flex flex-col items-center justify-center">
