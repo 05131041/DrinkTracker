@@ -2,94 +2,119 @@
 <html lang="zh-Hant">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>是有多愛喝 2026 </title>
-    <!-- 需求 1: 引入 React, Tailwind CSS 與 Google Fonts -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>是多愛喝 2026</title>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&display=swap" rel="stylesheet">
     <style>
-        body { 
-            font-family: 'Noto Sans TC', sans-serif; 
-            -webkit-tap-highlight-color: transparent;
-            overflow-x: hidden;
-        }
-        /* 需求 2: 夢幻低飽和色系漸層背景 */
+        body { font-family: 'Noto Sans TC', sans-serif; }
         .dreamy-gradient {
             background: linear-gradient(135deg, #FDFBFD 0%, #F8F2FC 100%);
         }
-        /* 需求 3: 玻璃擬態 (Glassmorphism) 面板 */
+        @keyframes float {
+            0% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-20px) rotate(5deg); }
+            100% { transform: translateY(0px) rotate(0deg); }
+        }
+        .float-element { animation: float 8s ease-in-out infinite; }
         .glass-panel {
             background: rgba(255, 255, 255, 0.7);
             backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
             border: 1px solid rgba(255, 255, 255, 0.3);
         }
-        /* 需求 4: 手機版優化，防止縮放與布局適配 */
-        input, select { font-size: 16px !important; }
-        .calendar-cell { aspect-ratio: 1 / 1.5; min-height: 100px; position: relative; transition: all 0.2s; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .animate-pop { animation: fadeIn 0.3s ease-out forwards; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #E2F0FB; border-radius: 10px; }
         
-        /* 需求 17 & 19: 日曆色階定義 (根據杯數變化) */
-        .bg-cup-0 { background-color: rgba(255, 255, 255, 0.5); }
-        .bg-cup-1 { background-color: #FDE2E4; } /* 淺粉 - 1杯 */
-        .bg-cup-2 { background-color: #FAD2D6; } /* 中粉 - 2杯 */
-        .bg-cup-3 { background-color: #F8BBD0; } /* 深粉 - 3杯以上 */
+        .btn-hover-sparkle:hover {
+            box-shadow: 0 0 15px rgba(253, 226, 228, 0.8);
+            transform: scale(1.02);
+        }
     </style>
 </head>
 <body class="dreamy-gradient min-h-screen text-[#94849A]">
     <div id="root"></div>
 
+    <!-- Firebase SDKs -->
     <script type="module">
-        // 需求 5: Firebase 初始化與雲端儲存設定
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-auth.js";
+        import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-firestore.js";
 
-        // 修正點：移除 getAnalytics 引用，防止儲存時報錯導致空白頁
+        // Firebase 配置
         const firebaseConfig = typeof __firebase_config !== 'undefined' 
             ? JSON.parse(__firebase_config) 
-            : {
-    		apiKey: "AIzaSyCFnYhdOMJNAxCnVoUDxDtAItKQjURd14w",
-    		authDomain: "drinks-4eb2c.firebaseapp.com",
-    		projectId: "drinks-4eb2c",
-    		storageBucket: "drinks-4eb2c.firebasestorage.app",
-    		messagingSenderId: "394916838880",
-    		appId: "1:394916838880:web:ebe01d2df44542f0347f85"
-	    };
+            : { 
+                apiKey: "AIzaSyCFnYhdOMJNAxCnVoUDxDtAItKQjURd14w", 
+                authDomain: "drinks-4eb2c.firebaseapp.com", 
+                projectId: "drinks-4eb2c", 
+                storageBucket: "drinks-4eb2c.firebasestorage.app", 
+                messagingSenderId: "394916838880", 
+                appId: "1:394916838880:web:ebe01d2df44542f0347f85" 
+            };
 
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'drink-tracker-2026';
 
-        // 強制掛載到 window，確保 React 可以讀取到
-        window.FB = { db, auth, appId, doc, setDoc, onSnapshot, signInAnonymously, signInWithCustomToken, onAuthStateChanged };
-        console.log("Firebase initialized and attached to window.");
+        // 將必要工具掛載至 window 物件供 React 使用
+        window.FB = { 
+            db, 
+            auth, 
+            appId, 
+            doc, 
+            setDoc, 
+            onSnapshot, 
+            signInAnonymously: () => signInAnonymously(auth), // 封裝匿名登入
+            signInWithCustomToken: (token) => signInWithCustomToken(auth, token), 
+            onAuthStateChanged: (cb) => onAuthStateChanged(auth, cb) 
+        };
     </script>
 
     <script type="text/babel">
         const { useState, useEffect, useMemo } = React;
 
-        // 需求 6: 珍珠奶茶 SVG 圖示
+        // 可愛的主圖示：珍奶
         const IconBoba = ({className}) => (
             <svg className={className} viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M18 14L22 52C22 55.3137 24.6863 58 28 58H36C39.3137 58 42 55.3137 42 52L46 14" stroke="currentColor" strokeWidth="3" strokeLinecap="round"/>
                 <path d="M16 14H48" stroke="currentColor" strokeWidth="3" strokeLinecap="round"/>
-                <circle cx="28" cy="48" r="2.5" fill="currentColor"/><circle cx="36" cy="46" r="2.5" fill="currentColor"/><circle cx="32" cy="52" r="2.5" fill="currentColor"/>
+                <path d="M40 6L36 14" stroke="currentColor" strokeWidth="3" strokeLinecap="round"/>
+                <circle cx="28" cy="48" r="2.5" fill="currentColor"/>
+                <circle cx="36" cy="46" r="2.5" fill="currentColor"/>
+                <circle cx="32" cy="52" r="2.5" fill="currentColor"/>
+                <circle cx="26" cy="42" r="2.5" fill="currentColor"/>
+                <circle cx="38" cy="40" r="2.5" fill="currentColor"/>
+                <path d="M22 28C22 28 26 30 32 30C38 30 42 28 42 28" stroke="currentColor" strokeWidth="2" strokeLinecap="round" opacity="0.3"/>
             </svg>
         );
 
-        // 需求 7 & 18 & 20: 隨機可愛圖示清單 (星星、愛心、雲朵、閃爍、月亮)
-        const CuteIcons = [
-            (p) => <svg {...p} viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>,
-            (p) => <svg {...p} viewBox="0 0 24 24" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>,
-            (p) => <svg {...p} viewBox="0 0 24 24" fill="currentColor"><path d="M17.5 19c-3.037 0-5.5-2.463-5.5-5.5 0-3.037 2.463-5.5 5.5-5.5s5.5 2.463 5.5 5.5c0 3.037-2.463 5.5-5.5 5.5zm-11-2c-2.485 0-4.5-2.015-4.5-4.5s2.015-4.5 4.5-4.5 4.5 2.015 4.5 4.5-2.015 4.5-4.5 4.5z"/></svg>,
-            (p) => <svg {...p} viewBox="0 0 24 24" fill="currentColor"><path d="M12 1L9 9l-8 3 8 3 3 8 3-8 8-3-8-3-3-8z"/></svg>,
-            (p) => <svg {...p} viewBox="0 0 24 24" fill="currentColor"><path d="M12 3a9 9 0 1 0 9 9 9.75 9.75 0 0 0-.67-3.41l-.1-.27.27.1A7.5 7.5 0 0 1 12 3z"/></svg>
+        // 隨機小圖示庫
+        const RandomIcons = [
+            // 冰淇淋
+            (props) => <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M7 11c0-2.8 2.2-5 5-5s5 2.2 5 5c0 1.1-.4 2.1-1 3H8c-.6-.9-1-1.9-1-3zM12 14v7M9 14l3 7 3-7" /></svg>,
+            // 咖啡杯
+            (props) => <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 8h1a4 4 0 110 8h-1M3 8h14v9a4 4 0 01-4 4H7a4 4 0 01-4-4V8zM6 2v2M10 2v2M14 2v2" /></svg>,
+            // 櫻桃
+            (props) => <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="7" cy="18" r="4"/><circle cx="17" cy="18" r="4"/><path d="M9 14.5c0-4 3.5-7.5 7.5-7.5M17 14.5V2" /></svg>,
+            // 甜甜圈
+            (props) => <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/></svg>,
+            // 熱飲
+            (props) => <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 8h1a4 4 0 010 8h-1M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8zM14 2c0 1-1 1-1 2s1 1 1 2M10 2c0 1-1 1-1 2s1 1 1 2M6 2c0 1-1 1-1 2s1 1 1 2" /></svg>,
+            // 蘇打
+            (props) => <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M7 22h10V5H7v17zM12 5V2M15 2h-6M10 10c0-1 1-1 1-2M13 14c0-1 1-1 1-2" /></svg>
         ];
+
+        const IconHeart = ({fill, className}) => <svg className={className} fill={fill || "none"} stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>;
+        const IconStar = ({fill, className}) => <svg className={className} fill={fill || "none"} stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.382-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"></path></svg>;
+
+        const ICE_OPTIONS = ['正常冰', '少冰', '微冰', '去冰', '常溫', '溫'];
+        const SUGAR_OPTIONS = ['無法調整', '半糖', '微糖', '一分糖', '無糖'];
 
         function App() {
             const [user, setUser] = useState(null);
@@ -97,86 +122,78 @@
             const [records, setRecords] = useState({});
             const [selectedDate, setSelectedDate] = useState(null);
             const [isModalOpen, setIsModalOpen] = useState(false);
-            const [isReady, setIsReady] = useState(false);
 
-            // 1. 等待 Firebase 初始化
             useEffect(() => {
-                const timer = setInterval(() => {
-                    if (window.FB && window.FB.auth) {
-                        setIsReady(true);
-                        clearInterval(timer);
-                        
-                        const { auth, onAuthStateChanged, signInAnonymously, signInWithCustomToken } = window.FB;
+                const checkFB = setInterval(() => {
+                    if (window.FB) {
+                        clearInterval(checkFB);
+                        const { onAuthStateChanged, signInAnonymously, signInWithCustomToken } = window.FB;
                         
                         const initAuth = async () => {
                             try {
                                 if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                                    await signInWithCustomToken(auth, __initial_auth_token);
+                                    await signInWithCustomToken(__initial_auth_token);
                                 } else {
-                                    await signInAnonymously(auth);
+                                    await signInAnonymously();
                                 }
-                            } catch (e) {
-                                console.error("Auth failed:", e);
+                            } catch (error) {
+                                console.error("Authentication failed:", error);
                             }
                         };
+                        
                         initAuth();
-                        onAuthStateChanged(auth, setUser);
+                        onAuthStateChanged(setUser);
                     }
-                }, 200);
-                return () => clearInterval(timer);
+                }, 100);
             }, []);
 
-            // 2. 監聽數據 (符合 Rule 1 的路徑)
             useEffect(() => {
-                if (!user || !isReady || !window.FB) return;
-                
+                if (!user || !window.FB) return;
                 const { db, appId, doc, onSnapshot } = window.FB;
-                // 注意：路徑必須嚴格遵循 /artifacts/{appId}/users/{userId}/{collectionName}
-                const docRef = doc(db, 'artifacts', appId, 'users', user.uid, 'userRecords', 'drinkData');
-                
+                const docRef = doc(db, 'artifacts', appId, 'users', user.uid, 'settings', 'drinkData');
                 const unsub = onSnapshot(docRef, (snap) => {
-                    if (snap.exists()) {
-                        setRecords(snap.data().records || {});
-                    }
-                }, (err) => {
-                    console.error("Firestore Error:", err);
-                });
+                    if (snap.exists()) setRecords(snap.data().records || {});
+                }, (err) => console.error("Firestore Error:", err));
                 return () => unsub();
-            }, [user, isReady]);
+            }, [user]);
 
-            // 3. 儲存數據
-            const saveToCloud = async (updatedRecords) => {
-                if (!user || !isReady || !window.FB) return;
-                try {
-                    const { db, appId, doc, setDoc } = window.FB;
-                    const docRef = doc(db, 'artifacts', appId, 'users', user.uid, 'userRecords', 'drinkData');
-                    await setDoc(docRef, { records: updatedRecords }, { merge: true });
-                    console.log("Saved successfully");
-                } catch (e) {
-                    console.error("Save Error:", e);
-                }
+            const saveToCloud = async (newRecords) => {
+                if (!user || !window.FB) return;
+                const { db, appId, doc, setDoc } = window.FB;
+                const docRef = doc(db, 'artifacts', appId, 'users', user.uid, 'settings', 'drinkData');
+                await setDoc(docRef, { records: newRecords });
             };
 
             const formatDate = (date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 
-            // 需求 8 & 14 & 19: 智慧統計 (不計藍點延續杯數)
+            const changeMonth = (offset) => {
+                const nextDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + offset, 1);
+                setCurrentMonth(nextDate);
+            };
+
             const monthlyStats = useMemo(() => {
-                const prefix = `${currentMonth.getFullYear()}-${String(currentMonth.getMonth() + 1).padStart(2, '0')}`;
+                const year = currentMonth.getFullYear();
+                const month = currentMonth.getMonth() + 1;
+                const prefix = `${year}-${String(month).padStart(2, '0')}`;
                 let cups = 0, cost = 0;
                 const shops = {};
                 Object.keys(records).forEach(d => {
                     if (d.startsWith(prefix)) {
-                        (records[d] || []).forEach(r => {
-                            if (!r.isContinued) cups++; 
-                            cost += Number(r.price) || 0;
+                        records[d].forEach(r => {
+                            // 若勾選「明天繼續喝」，系統帶出的價格會是空字串
+                            // 我們將空的價格視為「尚未購買/待填寫」，因此不計入杯數與價格
+                            if (r.price !== '' && r.price !== null && r.price !== undefined) {
+                                cups++;
+                                cost += Number(r.price) || 0;
+                            }
                             if (r.shopName) shops[r.shopName] = (shops[r.shopName] || 0) + 1;
                         });
                     }
                 });
-                return { cups, cost, fav: Object.entries(shops).sort((a,b) => b[1]-a[1])[0]?.[0] || '無' };
+                const fav = Object.entries(shops).sort((a,b) => b[1]-a[1])[0]?.[0] || '無紀錄';
+                return { cups, cost, fav };
             }, [records, currentMonth]);
 
-            // 需求 9: 明天繼續喝邏輯
             const handleSave = (dateStr, drinks) => {
                 let updated = { ...records, [dateStr]: drinks };
                 drinks.forEach(d => {
@@ -186,8 +203,9 @@
                         const nStr = formatDate(next);
                         if (next.getFullYear() === 2026) {
                             const nDrinks = updated[nStr] ? [...updated[nStr]] : [];
-                            if (!nDrinks.some(x => x.shopName === d.shopName && x.itemName === d.itemName) && nDrinks.length < 3) {
-                                nDrinks.push({ ...d, price: '', continueTomorrow: false, isContinued: true });
+                            const isDup = nDrinks.some(x => x.shopName === d.shopName && x.itemName === d.itemName);
+                            if (!isDup && nDrinks.length < 3) {
+                                nDrinks.push({ ...d, price: '', continueTomorrow: false });
                                 updated[nStr] = nDrinks;
                             }
                         }
@@ -209,107 +227,84 @@
                 return days;
             }, [currentMonth]);
 
-            const monthlyStats = useMemo(() => {
-                const prefix = `${currentMonth.getFullYear()}-${String(currentMonth.getMonth() + 1).padStart(2, '0')}`;
-                let cups = 0, cost = 0;
-                Object.keys(records).forEach(d => {
-                    if (d.startsWith(prefix)) {
-                        (records[d] || []).forEach(r => {
-                            if (!r.isContinued) cups++;
-                            cost += Number(r.price) || 0;
-                        });
-                    }
-                });
-                return { cups, cost };
-            }, [records, currentMonth]);
-
-            if (!isReady) {
-                return (
-                    <div className="flex items-center justify-center min-h-screen">
-                        <div className="animate-pulse text-[#D1C4D4] font-bold">載入中...</div>
-                    </div>
-                );
-            }
             return (
-                <div className="max-w-md mx-auto min-h-screen p-2 pt-4 pb-20">
-                    <div className="glass-panel rounded-[40px] shadow-2xl overflow-hidden border-4 border-white relative z-10">
-                        
-			{/* 需求 11: Header */}
-                        <div className="p-6 flex flex-col items-center gap-4">
-                            <h1 className="text-3xl font-black text-[#B2A4B8] flex items-center gap-2 italic tracking-tighter">
-                                <IconBoba className="w-10 h-10 text-[#D1C4D4]" /> 多愛喝
-                            </h1>
-                            <div className="flex items-center gap-6 bg-white/50 px-6 py-2 rounded-full border border-white shadow-inner">
-                                <button onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1))} className="font-bold">〈</button>
-                                <div className="text-center min-w-[80px]">
-                                    <span className="text-lg font-black text-[#94849A] block leading-none">2026</span>
-                                    <span className="text-xs font-bold text-[#B2A4B8]">{currentMonth.getMonth() + 1}月</span>
+                <div className="max-w-4xl mx-auto p-4 py-8 relative">
+                    <div className="fixed top-10 left-10 float-element opacity-20 pointer-events-none"><IconStar className="w-20 h-20 text-[#FFF9E6]" fill="#FFF9E6" /></div>
+                    <div className="fixed bottom-20 right-10 float-element opacity-20 pointer-events-none" style={{animationDelay: '1s'}}><IconHeart className="w-24 h-24 text-[#FDE2E4]" fill="#FDE2E4" /></div>
+
+                    <div className="glass-panel rounded-[50px] shadow-2xl overflow-hidden border-[10px] border-white/60">
+                        {/* Header */}
+                        <div className="p-8 md:p-12 flex flex-col md:flex-row justify-between items-center gap-6">
+                            <div className="flex flex-col items-center md:items-start group">
+                                <h1 className="text-4xl font-black text-[#B2A4B8] flex items-center gap-4 tracking-tighter italic">
+                                    <IconBoba className="w-14 h-14 text-[#D1C4D4] group-hover:scale-110 transition-transform duration-500" /> 是有多愛喝
+                                </h1>
+                                <p className="text-[10px] font-black text-[#D1C4D4] tracking-[0.3em] ml-2 mt-1">2026 DRINK TRACKER</p>
+                            </div>
+                            
+                            <div className="flex items-center gap-8 bg-white/50 px-8 py-3 rounded-full border border-white/80 shadow-inner">
+                                <button onClick={() => changeMonth(-1)} className="w-10 h-10 flex items-center justify-center hover:scale-125 transition-transform bg-white/40 rounded-full text-[#B2A4B8] font-bold">&lt;</button>
+                                <div className="text-center min-w-[100px]">
+                                    <span className="text-2xl font-black text-[#94849A] block leading-none">{currentMonth.getFullYear()}</span>
+                                    <span className="text-sm font-bold text-[#B2A4B8]">{currentMonth.getMonth() + 1}月</span>
                                 </div>
-                                <button onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1))} className="font-bold">〉</button>
+                                <button onClick={() => changeMonth(1)} className="w-10 h-10 flex items-center justify-center hover:scale-125 transition-transform bg-white/40 rounded-full text-[#B2A4B8] font-bold">&gt;</button>
                             </div>
                         </div>
 
-                        {/* 需求 12: 統計卡片 */}
-                        <div className="px-6 grid grid-cols-3 gap-2 mb-6">
-                            <div className="bg-[#FDE2E4]/30 p-3 rounded-2xl text-center border border-white/50">
-                                <p className="text-[8px] font-bold text-[#C19EA3] uppercase">本月杯數</p>
-                                <p className="text-lg font-black text-[#E5A7AF]">{monthlyStats.cups}</p>
+                        {/* Stats Panel */}
+                        <div className="px-10 grid grid-cols-1 md:grid-cols-3 gap-5 mb-10">
+                            <div className="bg-[#FDE2E4]/25 p-5 rounded-[35px] border border-[#FDE2E4]/40 flex flex-col items-center justify-center">
+                                <p className="text-[9px] font-black uppercase tracking-widest text-[#C19EA3] mb-1">Monthly Total</p>
+                                <p className="text-3xl font-black text-[#E5A7AF]">{monthlyStats.cups} 杯</p>
                             </div>
-                            <div className="bg-[#F3E5F5]/30 p-3 rounded-2xl text-center border border-white/50">
-                                <p className="text-[8px] font-bold text-[#A696AF]">本月花費</p>
-                                <p className="text-lg font-black text-[#B39DDB]">${monthlyStats.cost}</p>
+                            <div className="bg-[#F3E5F5]/25 p-5 rounded-[35px] border border-[#F3E5F5]/40 flex flex-col items-center justify-center">
+                                <p className="text-[9px] font-black uppercase tracking-widest text-[#A696AF] mb-1">Expense</p>
+                                <p className="text-3xl font-black text-[#B39DDB]">${monthlyStats.cost}</p>
                             </div>
-                            <div className="bg-[#FFF9E6]/30 p-3 rounded-2xl text-center border border-white/50">
-                                <p className="text-[8px] font-bold text-[#B8B89F]">最常喝</p>
-                                <p className="text-[10px] font-black text-[#A3A38E] truncate">{monthlyStats.fav}</p>
+                            <div className="bg-[#FDFBF2]/40 p-5 rounded-[35px] border border-[#FFF9E6]/40 flex flex-col items-center justify-center">
+                                <p className="text-[9px] font-black uppercase tracking-widest text-[#B8B89F] mb-1">Favorite Shop</p>
+                                <p className="text-sm font-black text-[#A3A38E] truncate max-w-full text-center">{monthlyStats.fav}</p>
                             </div>
                         </div>
 
-                        {/* 需求 10 & 17 & 19 & 20: 日曆區域 (包含色階、飲品名、藍點、隨機圖示) */}
-                        <div className="px-3 pb-8 grid grid-cols-7 gap-1">
-                            {['日', '一', '二', '三', '四', '五', '六'].map(d => <div key={d} className="text-center text-[10px] font-black text-[#D1C4D4] pb-2">{d}</div>)}
+                        {/* Calendar Grid */}
+                        <div className="p-10 pt-0 grid grid-cols-7 gap-3">
+                            {['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'].map(d => <div key={d} className="text-center text-[9px] font-black text-[#D1C4D4] tracking-widest pb-3">{d}</div>)}
                             {calendarDays.map((d, i) => {
-                                if (!d) return <div key={`empty-${i}`} className="h-24" />;
+                                if (!d) return <div key={`e-${i}`} className="h-28" />;
                                 const s = formatDate(d);
                                 const rs = records[s] || [];
                                 
-                                // 需求 19: 視覺化追蹤色階 (只計算實喝杯數)
-                                const realCount = rs.filter(r => !r.isContinued).length;
-                                const colorClass = realCount === 0 ? 'bg-cup-0' : (realCount === 1 ? 'bg-cup-1' : (realCount === 2 ? 'bg-cup-2' : 'bg-cup-3'));
-                                
-                                // 需求 20: 隨機可愛圖示 (根據日期分配)
-                                const IconComp = CuteIcons[d.getDate() % CuteIcons.length];
+                                let bgClass = 'bg-white/40';
+                                if (rs.length === 1) bgClass = 'bg-[#FDE2E4]/20';
+                                else if (rs.length === 2) bgClass = 'bg-[#FDE2E4]/40';
+                                else if (rs.length >= 3) bgClass = 'bg-[#F8BBD0]/30';
 
                                 return (
                                     <button 
                                         key={s} 
                                         onClick={() => { setSelectedDate(d); setIsModalOpen(true); }} 
-                                        className={`calendar-cell rounded-xl border border-white/50 flex flex-col p-1 overflow-hidden shadow-sm hover:shadow-md ${colorClass}`}
+                                        className={`h-28 rounded-[35px] border-2 border-white/40 flex flex-col p-3 transition-all hover:scale-105 hover:bg-white/90 hover:shadow-xl group relative overflow-hidden ${bgClass}`}
                                     >
-					{/* 日期與隨機圖示層 */}
-                                        <div className="flex justify-between items-start w-full relative z-10">
-                                            <span className="text-[9px] font-black text-[#94849A]">{d.getDate()}</span>
-                                            {/* 需求 20: 隨機圖示展示 */}
-                                            <div className="text-[#B2A4B8] opacity-30">
-                                                {IconComp({className: "w-3 h-3"})}
-                                            </div>
+                                        <span className="text-[11px] font-black text-[#B2A4B8] group-hover:text-[#94849A] relative z-10">{d.getDate()}</span>
+                                        <div className="mt-2 space-y-1 w-full relative z-10">
+                                            {rs.map((r, idx) => {
+                                                // 根據日期和索引生成一個確定的隨機數 (用於選擇圖示)
+                                                const iconIndex = (d.getDate() + idx) % RandomIcons.length;
+                                                const IconComponent = RandomIcons[iconIndex];
+                                                return (
+                                                    <div key={idx} className="flex items-center gap-1 text-[8px] bg-white/70 rounded-full px-2 py-0.5 truncate font-bold text-[#94849A] border border-white/60 shadow-sm animate-in slide-in-from-left-2">
+                                                        <IconComponent className="w-2 h-2 text-[#E5A7AF] shrink-0" />
+                                                        <span className="truncate">{r.itemName || '飲品'}</span>
+                                                    </div>
+                                                );
+                                            })}
                                         </div>
-
-                                        <div className="flex flex-col gap-0.5 mt-1 w-full overflow-hidden relative z-20">
-                                            {/* 需求 19: 日曆格內顯示品名與藍點 */}
-                                            {rs.map((r, idx) => (
-                                                <div key={idx} className="flex items-center gap-0.5 bg-white/40 rounded-sm px-1 py-0.5 min-w-0">
-                                                    {r.isContinued && <div className="w-1 h-1 rounded-full bg-blue-400 shrink-0 shadow-sm"></div>}
-                                                    <span className="text-[7px] font-bold text-[#94849A] truncate leading-none">
-                                                        {r.itemName || '飲品'}
-                                                    </span>
-                                                </div>
-                                            ))}
-                                        </div>
-                                        {/* 隨機驚喜圖示 (第 13 點) */}
+                                        {/* 背景裝飾圖示：僅當有紀錄時顯示一個大圖示在右下角 */}
                                         {rs.length > 0 && (
-                                            <div className="absolute bottom-0 right-0 opacity-10">
-                                                {React.createElement(RandomIcons[d.getDate() % RandomIcons.length], { className: "w-6 h-6" })}
+                                            <div className="absolute -bottom-1 -right-1 opacity-10 group-hover:opacity-20 transition-opacity">
+                                                {React.createElement(RandomIcons[d.getDate() % RandomIcons.length], { className: "w-10 h-10" })}
                                             </div>
                                         )}
                                     </button>
@@ -318,21 +313,18 @@
                         </div>
                     </div>
 
-                    {/* 需求 15: 沉浸式編輯彈窗 */}
+                    {/* Editor Modal */}
                     {isModalOpen && selectedDate && (
-                        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm px-0">
-                            <div className="bg-white w-full max-w-md h-[92vh] overflow-y-auto rounded-t-[40px] sm:rounded-[40px] p-6 pb-12 shadow-2xl animate-pop">
-                                <div className="flex justify-between items-center mb-6">
-                                    <div className="flex flex-col">
-                                        <h2 className="text-2xl font-black text-[#B2A4B8] italic">{formatDate(selectedDate)}</h2>
-                                        <span className="text-[10px] font-bold text-[#D1C4D4] tracking-widest uppercase">Recording Sweetness</span>
+                        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#F8F2FC]/50 backdrop-blur-xl">
+                            <div className="bg-white/95 w-full max-w-xl max-h-[90vh] overflow-y-auto rounded-[50px] shadow-3xl p-10 border-[10px] border-white animate-in zoom-in-95 duration-300">
+                                <div className="flex justify-between items-center mb-8">
+                                    <div className="flex items-center gap-3">
+                                        <div className="bg-[#FAF7FD] p-3 rounded-2xl"><IconBoba className="w-8 h-8 text-[#B2A4B8]" /></div>
+                                        <h2 className="text-3xl font-black text-[#B2A4B8] italic">{formatDate(selectedDate)}</h2>
                                     </div>
-                                    <button onClick={() => setIsModalOpen(false)} className="w-10 h-10 rounded-full bg-[#FAF7FD] flex items-center justify-center font-bold text-[#B2A4B8]">✕</button>
+                                    <button onClick={() => setIsModalOpen(false)} className="w-12 h-12 rounded-full bg-[#FAF7FD] flex items-center justify-center text-[#B2A4B8] hover:bg-[#FDE2E4] hover:text-white transition-colors">?</button>
                                 </div>
-                                <DrinkEditor 
-                                    initialDrinks={records[formatDate(selectedDate)] || []} 
-                                    onSave={(drinks) => handleSave(formatDate(selectedDate), drinks)} 
-                                />
+                                <DrinkEditor initialDrinks={records[formatDate(selectedDate)] || []} onSave={(drinks) => handleSave(formatDate(selectedDate), drinks)} />
                             </div>
                         </div>
                     )}
@@ -340,62 +332,84 @@
             );
         }
 
-        // 需求 16: 飲品編輯
         function DrinkEditor({ initialDrinks, onSave }) {
             const [drinks, setDrinks] = useState(initialDrinks);
-            const add = () => drinks.length < 3 && setDrinks([...drinks, { shopName: '', itemName: '', price: '', size: '中杯', ice: '去冰', sugar: '微糖', continueTomorrow: false, isContinued: false }]);
+            const add = () => drinks.length < 3 && setDrinks([...drinks, { shopName: '', itemName: '', price: '', size: '中杯', ice: '正常冰', sugar: '微糖', continueTomorrow: false }]);
             const up = (i, f, v) => { const n = [...drinks]; n[i][f] = v; setDrinks(n); };
 
             return (
-                <div className="space-y-6">
+                <div className="space-y-8">
                     {drinks.map((d, i) => (
-                        <div key={i} className={`p-5 rounded-3xl border-2 relative ${d.isContinued ? 'bg-blue-50/40 border-blue-100' : 'bg-[#FDFBFD] border-[#F8F2FC]'}`}>
-                            <button onClick={() => setDrinks(drinks.filter((_, idx) => idx !== i))} className="absolute top-4 right-4 text-[#D1C4D4]">✕</button>
+                        <div key={i} className="bg-[#FDFBFD] p-8 rounded-[40px] border-2 border-[#F8F2FC] relative shadow-inner">
+                            <button onClick={() => setDrinks(drinks.filter((_, idx) => idx !== i))} className="absolute -top-3 -right-3 w-10 h-10 bg-white border-2 border-[#F8F2FC] rounded-full flex items-center justify-center text-[#D1C4D4] hover:text-red-300 transition-colors shadow-sm font-bold">?</button>
                             
-                            {d.isContinued && <div className="text-[8px] font-black text-blue-400 mb-2 uppercase italic tracking-tighter">Continued Drink (Not Counted)</div>}
-                            
-                            <div className="grid grid-cols-2 gap-3 mb-4">
-                                <input className="p-3 bg-white rounded-xl border border-[#F8F2FC] font-bold text-sm outline-none" placeholder="店家" value={d.shopName} onChange={e => up(i, 'shopName', e.target.value)} />
-                                <input className="p-3 bg-white rounded-xl border border-[#F8F2FC] font-bold text-sm outline-none" placeholder="品名" value={d.itemName} onChange={e => up(i, 'itemName', e.target.value)} />
+                            <div className="grid grid-cols-2 gap-5 mb-5">
+                                <div className="space-y-2">
+                                    <p className="text-[9px] font-black text-[#D1C4D4] tracking-widest uppercase ml-2">Shop</p>
+                                    <input className="w-full p-4 bg-white rounded-2xl border border-[#F8F2FC] outline-none text-sm font-bold placeholder-[#D1C4D4] focus:ring-2 ring-[#E2F0FB]/50" placeholder="店家名稱" value={d.shopName} onChange={e => up(i, 'shopName', e.target.value)} />
+                                </div>
+                                <div className="space-y-2">
+                                    <p className="text-[9px] font-black text-[#D1C4D4] tracking-widest uppercase ml-2">Item</p>
+                                    <input className="w-full p-4 bg-white rounded-2xl border border-[#F8F2FC] outline-none text-sm font-bold placeholder-[#D1C4D4] focus:ring-2 ring-[#E2F0FB]/50" placeholder="想喝什麼？" value={d.itemName} onChange={e => up(i, 'itemName', e.target.value)} />
+                                </div>
                             </div>
                             
-                            <div className="grid grid-cols-3 gap-2 mb-4">
-                                <input type="number" className="p-3 bg-white rounded-xl border border-[#F8F2FC] text-sm font-bold outline-none" placeholder="NT$" value={d.price} onChange={e => up(i, 'price', e.target.value)} />
-                                <div className="col-span-2 flex gap-1">
-                                    {['中杯', '大杯'].map(s => (
-                                        <button key={s} onClick={() => up(i, 'size', s)} className={`flex-1 text-[10px] font-bold rounded-xl border ${d.size === s ? 'bg-[#FDE2E4] border-[#FDE2E4] text-white' : 'bg-white border-[#F8F2FC]'}`}>{s}</button>
+                            <div className="grid grid-cols-2 gap-5 mb-5">
+                                <div className="space-y-2">
+                                    <p className="text-[9px] font-black text-[#D1C4D4] tracking-widest uppercase ml-2">Price</p>
+                                    <input type="number" className="w-full p-4 bg-white rounded-2xl border border-[#F8F2FC] outline-none text-sm font-bold" placeholder="NT$" value={d.price} onChange={e => up(i, 'price', e.target.value)} />
+                                </div>
+                                <div className="space-y-2">
+                                    <p className="text-[9px] font-black text-[#D1C4D4] tracking-widest uppercase ml-2">Size</p>
+                                    <div className="flex gap-2">
+                                        {['中杯', '大杯'].map(s => (
+                                            <button key={s} onClick={() => up(i, 'size', s)} className={`flex-1 py-4 rounded-2xl text-xs font-black transition-all ${d.size === s ? 'bg-[#E2F0FB] text-[#7895B2] shadow-sm' : 'bg-white text-[#D1C4D4] border border-[#F8F2FC]'}`}>{s}</button>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="mb-5 space-y-2">
+                                <p className="text-[9px] font-black text-[#D1C4D4] tracking-widest uppercase ml-2">Ice Level</p>
+                                <div className="flex flex-wrap gap-2">
+                                    {ICE_OPTIONS.map(o => (
+                                        <button key={o} onClick={() => up(i, 'ice', o)} className={`px-4 py-2.5 rounded-xl text-[10px] font-black transition-all ${d.ice === o ? 'bg-[#E2F0FB] text-[#7895B2] border-[#E2F0FB]' : 'bg-white text-[#D1C4D4] border border-[#F8F2FC]'}`}>{o}</button>
                                     ))}
                                 </div>
                             </div>
 
-                            <div className="mb-4">
-                                <div className="flex flex-wrap gap-1.5">
-                                    {['正常冰', '少冰', '微冰', '去冰', '常溫', '熱', '無法調整'].map(l => (
-                                        <button key={l} onClick={() => up(i, 'ice', l)} className={`px-3 py-1.5 text-[9px] font-bold rounded-xl border ${d.ice === l ? 'bg-[#E2F0FB] text-[#7895B2] border-[#E2F0FB]' : 'bg-white border-[#F8F2FC]'}`}>{l}</button>
+                            <div className="mb-6 space-y-2">
+                                <p className="text-[9px] font-black text-[#D1C4D4] tracking-widest uppercase ml-2">Sugar Level</p>
+                                <div className="flex flex-wrap gap-2">
+                                    {SUGAR_OPTIONS.map(o => (
+                                        <button key={o} onClick={() => up(i, 'sugar', o)} className={`px-4 py-2.5 rounded-xl text-[10px] font-black transition-all ${d.sugar === o ? 'bg-[#F3E5F5] text-[#A696AF] border-[#F3E5F5]' : 'bg-white text-[#D1C4D4] border border-[#F8F2FC]'}`}>{o}</button>
                                     ))}
                                 </div>
                             </div>
 
-                            <div className="mb-4">
-                                <div className="flex flex-wrap gap-1.5">
-                                    {['正常糖', '半糖', '微糖', '無糖', '無法調整'].map(l => (
-                                        <button key={l} onClick={() => up(i, 'sugar', l)} className={`px-3 py-1.5 text-[9px] font-bold rounded-xl border ${d.sugar === l ? 'bg-[#F3E5F5] text-[#A696AF] border-[#F3E5F5]' : 'bg-white border-[#F8F2FC]'}`}>{l}</button>
-                                    ))}
+                            <label className="flex items-center gap-3 cursor-pointer p-4 bg-white rounded-2xl border border-[#F8F2FC] group">
+                                <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all ${d.continueTomorrow ? 'bg-[#FDE2E4] border-[#FDE2E4]' : 'bg-white border-[#F8F2FC]'}`}>
+                                    {d.continueTomorrow && <IconHeart fill="white" className="w-4 h-4 text-white" />}
                                 </div>
-                            </div>
-
-                            <label className="flex items-center gap-2 cursor-pointer p-3 bg-white/60 rounded-xl border border-white">
-                                <input type="checkbox" className="w-4 h-4 accent-[#E5A7AF]" checked={d.continueTomorrow} onChange={e => up(i, 'continueTomorrow', e.target.checked)} /> 
-                                <span className="text-[10px] font-bold text-[#94849A]">明天繼續喝 (藍點紀錄)</span>
+                                <input type="checkbox" className="hidden" checked={d.continueTomorrow} onChange={e => up(i, 'continueTomorrow', e.target.checked)} /> 
+                                <span className="text-xs font-black text-[#B2A4B8] group-hover:text-[#FDE2E4]">明天繼續喝</span>
                             </label>
                         </div>
                     ))}
-                    
+
                     {drinks.length < 3 && (
-                        <button onClick={add} className="w-full py-6 border-4 border-dashed border-[#F8F2FC] rounded-3xl text-[#D1C4D4] font-black text-sm hover:bg-[#FAF7FD] transition-all">+ NEW DRINK</button>
+                        <button onClick={add} className="w-full py-8 border-4 border-dashed border-[#F8F2FC] rounded-[40px] text-[#D1C4D4] font-black hover:bg-[#FAF7FD] hover:text-[#B2A4B8] transition-all flex flex-col items-center gap-2">
+                            <span className="text-3xl">＋</span>
+                            <span className="text-[10px] tracking-widest uppercase">Add Another Cup</span>
+                        </button>
                     )}
-                    
-                    <button onClick={() => onSave(drinks)} className="w-full py-4 bg-[#FDE2E4] text-[#C19EA3] rounded-2xl font-black text-lg shadow-lg active:scale-95 transition-transform">儲存</button>
+
+                    <button 
+                        onClick={() => onSave(drinks)} 
+                        className="w-full py-5 bg-[#FDE2E4] text-[#C19EA3] rounded-[25px] font-black text-lg shadow-xl shadow-[#FDE2E4]/40 btn-hover-sparkle transition-all active:scale-95"
+                    >
+                        儲存
+                    </button>
                 </div>
             );
         }
