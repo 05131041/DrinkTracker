@@ -176,6 +176,7 @@
                         onAuthStateChanged(setUser);
                     }
                 }, 100);
+                return () => clearInterval(checkFB);
             }, []);
 
             // 資料同步副作用：監聽雲端資料庫的變動
@@ -216,7 +217,7 @@
                 const shops = {};
                 Object.keys(records).forEach(d => {
                     if (d.startsWith(prefix)) {
-                        records[d].forEach(r => {
+                        (records[d] || []).forEach(r => {
                             // 若勾選「明天繼續喝」，系統帶出的價格會是空字串
                             // 我們將空的價格視為「尚未購買/待填寫」，因此不計入杯數與價格
                             if (r.price !== '' && r.price !== null && r.price !== undefined) {
@@ -362,7 +363,7 @@
                                         <div className="bg-[#FAF7FD] p-2 md:p-3 rounded-2xl"><IconBoba className="w-6 h-6 md:w-8 md:h-8 text-[#B2A4B8]" /></div>
                                         <h2 className="text-2xl md:text-3xl font-black text-[#B2A4B8] italic">{formatDate(selectedDate)}</h2>
                                     </div>
-                                    <button onClick={() => setIsModalOpen(false)} className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-[#FAF7FD] flex items-center justify-center text-[#B2A4B8] hover:bg-[#FDE2E4] hover:text-white transition-colors">?</button>
+                                    <button onClick={() => setIsModalOpen(false)} className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-[#FAF7FD] flex items-center justify-center text-[#B2A4B8] hover:bg-[#FDE2E4] hover:text-white transition-colors">✕</button>
                                 </div>
                                 <DrinkEditor initialDrinks={records[formatDate(selectedDate)] || []} onSave={(drinks) => handleSave(formatDate(selectedDate), drinks)} />
                             </div>
@@ -385,7 +386,7 @@
                     {/* 遍歷渲染每一杯飲料的編輯區塊 */}
                     {drinks.map((d, i) => (
                         <div key={i} className="bg-[#FDFBFD] p-6 md:p-8 rounded-[30px] md:rounded-[40px] border-2 border-[#F8F2FC] relative shadow-inner">
-                            <button onClick={() => setDrinks(drinks.filter((_, idx) => idx !== i))} className="absolute -top-3 -right-3 w-8 h-8 md:w-10 md:h-10 bg-white border-2 border-[#F8F2FC] rounded-full flex items-center justify-center text-[#D1C4D4] hover:text-red-300 transition-colors shadow-sm font-bold">?</button>
+                            <button onClick={() => setDrinks(drinks.filter((_, idx) => idx !== i))} className="absolute -top-3 -right-3 w-8 h-8 md:w-10 md:h-10 bg-white border-2 border-[#F8F2FC] rounded-full flex items-center justify-center text-[#D1C4D4] hover:text-red-300 transition-colors shadow-sm font-bold">✕</button>
 
                             {/* 店家與品項輸入 */}
                             <div className="grid grid-cols-2 gap-3 md:gap-5 mb-5">
