@@ -569,16 +569,19 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 12px;
-      padding: 14px 16px;
-      border-radius: 22px;
-      background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(247, 241, 232, 0.98));
-      border: 1px solid rgba(234, 223, 206, 0.95);
+      gap: 14px;
+      padding: 16px 18px;
+      border-radius: 24px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.99), rgba(246, 239, 228, 0.99));
+      border: 1px solid rgba(234, 223, 206, 0.98);
       box-shadow: var(--shadow-soft);
     }
 
     .drink-open {
       flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 14px;
       min-width: 0;
       border: 0;
       padding: 0;
@@ -586,6 +589,29 @@
       text-align: left;
       color: inherit;
       cursor: pointer;
+    }
+
+    .drink-open-icon {
+      width: 46px;
+      height: 46px;
+      flex: 0 0 auto;
+      display: grid;
+      place-items: center;
+      border-radius: 16px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(241, 228, 210, 0.9));
+      border: 1px solid rgba(255, 248, 240, 0.98);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.92);
+    }
+
+    .drink-open-icon svg {
+      width: 28px;
+      height: 28px;
+      overflow: visible;
+    }
+
+    .drink-open-body {
+      min-width: 0;
+      flex: 1;
     }
 
     .drink-open-title {
@@ -598,19 +624,47 @@
     }
 
     .drink-open-meta {
-      margin-top: 6px;
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .drink-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 5px 9px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.8);
+      border: 1px solid rgba(238, 229, 214, 0.96);
       color: var(--muted);
-      font-size: 12px;
-      line-height: 1.5;
+      font-size: 11px;
+      line-height: 1;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .drink-chip strong {
+      color: var(--text);
+      font-weight: 900;
+    }
+
+    .drink-open-arrow {
+      flex: 0 0 auto;
+      color: #a68a71;
+      font-size: 18px;
+      font-weight: 900;
     }
 
     .drink-delete {
       flex: 0 0 auto;
       border: 0;
       border-radius: 999px;
-      background: #f5eadc;
+      background: rgba(245, 234, 220, 0.95);
       color: #8d735d;
-      padding: 10px 12px;
+      padding: 10px 14px;
       font-size: 12px;
       font-weight: 900;
       cursor: pointer;
@@ -830,6 +884,25 @@
       }
       .drink-summary {
         align-items: flex-start;
+        padding: 14px;
+      }
+      .drink-open {
+        gap: 10px;
+      }
+      .drink-open-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 14px;
+      }
+      .drink-open-title {
+        font-size: 15px;
+      }
+      .drink-open-meta {
+        gap: 6px;
+      }
+      .drink-chip {
+        padding: 4px 8px;
+        font-size: 10px;
       }
       .grid-2 { grid-template-columns: 1fr; }
       .actions { flex-direction: column; }
@@ -939,7 +1012,7 @@
       <div class="editor-list" id="editorList"></div>
       <div class="actions">
         <button class="action-btn action-add" id="addDrinkBtn" type="button">＋ 新增一杯</button>
-        <button class="action-btn action-save" id="saveBtn" type="button">儲存</button>
+        <button class="action-btn action-save" id="saveBtn" type="button">儲存到 Firebase</button>
       </div>
     </section>
   </div>
@@ -1351,17 +1424,23 @@
       if (state.activeDrinkIndex === null) {
         elements.editorList.innerHTML = state.modalDrinks.map(function (drink, index) {
           const title = escapeHtml(drink.itemName || "未命名飲料");
-          const meta = [
-            drink.shopName || "未填店家",
-            drink.price ? "NT$ " + escapeHtml(String(drink.price)) : "未填價格",
-            drink.size || "中杯"
-          ].join(" ・ ");
+          const shopName = escapeHtml(drink.shopName || "未填店家");
+          const price = drink.price ? "NT$ " + escapeHtml(String(drink.price)) : "未填價格";
+          const size = escapeHtml(drink.size || "中杯");
 
           return (
             '<article class="drink-summary">' +
               '<button class="drink-open" type="button" data-open-drink="' + index + '">' +
-                '<div class="drink-open-title">' + title + "</div>" +
-                '<div class="drink-open-meta">' + escapeHtml(meta) + "</div>" +
+                '<div class="drink-open-icon">' + DRINK_ICON_MARKUP + "</div>" +
+                '<div class="drink-open-body">' +
+                  '<div class="drink-open-title">' + title + "</div>" +
+                  '<div class="drink-open-meta">' +
+                    '<span class="drink-chip"><strong>店家</strong>' + shopName + "</span>" +
+                    '<span class="drink-chip"><strong>價格</strong>' + price + "</span>" +
+                    '<span class="drink-chip"><strong>尺寸</strong>' + size + "</span>" +
+                  "</div>" +
+                "</div>" +
+                '<span class="drink-open-arrow">›</span>' +
               "</button>" +
               '<button class="drink-delete" type="button" data-remove="' + index + '">刪除</button>' +
             "</article>"
@@ -1488,7 +1567,7 @@
         shopName: "",
         itemName: "",
         price: "",
-        size: "中杯",
+        size: "大杯",
         ice: "少冰",
         sugar: "無糖",
         continueTomorrow: false
@@ -1501,7 +1580,7 @@
         shopName: String(drink.shopName || "").trim(),
         itemName: String(drink.itemName || "").trim(),
         price: String(drink.price === undefined || drink.price === null ? "" : drink.price).trim(),
-        size: SIZE_OPTIONS.includes(drink.size) ? drink.size : "中杯",
+        size: SIZE_OPTIONS.includes(drink.size) ? drink.size : "大杯",
         ice: ICE_OPTIONS.includes(drink.ice) ? drink.ice : "少冰",
         sugar: SUGAR_OPTIONS.includes(drink.sugar) ? drink.sugar : "無糖",
         continueTomorrow: Boolean(drink.continueTomorrow)
