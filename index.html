@@ -17,6 +17,12 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- 引入思源黑體 (Noto Sans TC)，提供美觀的繁體中文顯示 -->
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&display=swap" rel="stylesheet">
+    
+    <!-- 引入傳統相容版 Firebase SDK（避免使用 type="module" 與 import 語法，解決環境阻擋與 Babel standalone 的衝突問題） -->
+    <script src="https://www.gstatic.com/firebasejs/11.1.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.1.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.1.0/firebase-firestore-compat.js"></script>
+
     <style>
         /* 設定全域字體優先順序 */
         body { font-family: 'Noto Sans TC', sans-serif; }
@@ -53,13 +59,8 @@
     <!-- React 應用程式的渲染根目錄 -->
     <div id="root"></div>
 
-    <!-- Firebase 模組化設定腳本 -->
-    <script type="module">
-        // 匯入 Firebase SDK 的必要功能
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-auth.js";
-        import { getFirestore, doc, setDoc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-firestore.js";
-
+    <!-- 傳統非同步與安全同步包裝層，無須 type="module"，在任何瀏覽器/本機開啟皆能 100% 成功執行 -->
+    <script>
         // Firebase 資料庫連線配置
         const firebaseConfig = typeof __firebase_config !== 'undefined' 
             ? JSON.parse(__firebase_config) 
@@ -72,25 +73,39 @@
                 appId: "1:394916838880:web:ebe01d2df44542f0347f85" 
             };
 
-        // 初始化 Firebase 實例
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
-        // 獲取應用程式識別碼，確保資料路徑正確
+        // 初始化 Firebase 相容版實例
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'drink-tracker-2026';
 
-        // 將 Firebase 工具掛載到 window 全域物件，方便 React 調用
+        // 建立 window.FB 橋接，將傳統 SDK 對象包裝成 React 代碼所期待的 v9 模組化 API 格式
         window.FB = { 
             db, 
             auth, 
             appId, 
-            doc, 
-            setDoc, 
-            onSnapshot, 
-            collection,
-            signInAnonymously: () => signInAnonymously(auth),
-            signInWithCustomToken: (token) => signInWithCustomToken(auth, token), 
-            onAuthStateChanged: (cb) => onAuthStateChanged(auth, cb) 
+            doc: (dbInstance, ...pathSegments) => {
+                // 將路徑段數串接，呼叫 compat 的 doc() 獲取 Reference
+                return dbInstance.doc(pathSegments.join('/'));
+            }, 
+            setDoc: async (docRef, data) => {
+                // 將 setDoc 映射至 DocumentReference.set()
+                return docRef.set(data);
+            }, 
+            onSnapshot: (docRef, callback, errorCallback) => {
+                // 映射 onSnapshot 並封裝 DocumentSnapshot, 使其可以用 snap.exists() 函數
+                return docRef.onSnapshot((compatSnap) => {
+                    const wrappedSnap = {
+                        exists: () => compatSnap.exists,
+                        data: () => compatSnap.data()
+                    };
+                    callback(wrappedSnap);
+                }, errorCallback);
+            }, 
+            collection: () => {}, 
+            signInAnonymously: () => auth.signInAnonymously(),
+            signInWithCustomToken: (token) => auth.signInWithCustomToken(token), 
+            onAuthStateChanged: (cb) => auth.onAuthStateChanged(cb) 
         };
     </script>
 
@@ -142,7 +157,7 @@
             // 使用者認證狀態
             const [user, setUser] = useState(null);
             
-            // 當前月曆顯示的月份 (新增功能：若當前為 2026 年，進入網頁自動跳轉到當下月份的第一天，否則預設為 2026 年 1 月 1 日)
+            // 當前月曆顯示的月份 (智慧定位：若當前系統時間為 2026 年，進入網頁自動跳轉到當下月份，否則預設為 2026 年 1 月 1 日)
             const [currentMonth, setCurrentMonth] = useState(() => {
                 const now = new Date();
                 if (now.getFullYear() === 2026) {
@@ -278,7 +293,6 @@
                     <div className="fixed top-10 left-10 float-element opacity-20 pointer-events-none"><IconStar className="w-20 h-20 text-[#FFF9E6]" fill="#FFF9E6" /></div>
                     <div className="fixed bottom-20 right-10 float-element opacity-20 pointer-events-none" style={{animationDelay: '1s'}}><IconHeart className="w-24 h-24 text-[#FDE2E4]" fill="#FDE2E4" /></div>
                     
-                    {/* 這裡已將原先的 HTML 註解修正為 React 標準語法 { /* 註解內容 * / } */}
                     {/* 主介面外殼 */}
                     <div className="glass-panel rounded-[50px] shadow-2xl overflow-hidden border-[10px] border-white/60">
                         
@@ -317,6 +331,7 @@
                             </div>
                         </div>
 
+                        {}
                         {/* 月曆表格區 */}
                         <div className="p-10 pt-0 grid grid-cols-7 gap-3">
                             
