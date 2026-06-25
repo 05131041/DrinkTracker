@@ -13,7 +13,7 @@
   <script src="https://www.gstatic.com/firebasejs/11.1.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/11.1.0/firebase-firestore-compat.js"></script>
   <style>
-    /* 米色文青主題色票：用暖米、奶茶、鼠尾草取代原本偏粉紫的配色 */
+    /* 米色文青主題色票：用暖米、奶茶、鼠尾草的配色 */
     :root {
       --bg-top: #f6efe3;
       --bg-bottom: #efe6d8;
@@ -420,30 +420,12 @@
       z-index: 1;
       display: flex;
       align-items: center;
-      justify-content: space-between;
-      gap: 8px;
     }
 
     .day-number {
       font-size: 14px;
       font-weight: 900;
-    }
-
-    .day-count {
-      padding: 4px 8px;
-      border-radius: 999px;
-      background: rgba(255, 255, 255, 0.78);
-      border: 1px solid rgba(255, 255, 255, 0.94);
-      color: #8f7964;
-      font-size: 10px;
-      font-weight: 900;
-      letter-spacing: 0.06em;
-      white-space: nowrap;
-    }
-
-    .day-count.is-empty {
-      color: #b09d8d;
-      background: rgba(255, 255, 255, 0.9);
+      color: var(--text);
     }
 
     .day-list {
@@ -581,6 +563,57 @@
       display: flex;
       flex-direction: column;
       gap: 18px;
+    }
+
+    .drink-summary {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 14px 16px;
+      border-radius: 22px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(247, 241, 232, 0.98));
+      border: 1px solid rgba(234, 223, 206, 0.95);
+      box-shadow: var(--shadow-soft);
+    }
+
+    .drink-open {
+      flex: 1;
+      min-width: 0;
+      border: 0;
+      padding: 0;
+      background: transparent;
+      text-align: left;
+      color: inherit;
+      cursor: pointer;
+    }
+
+    .drink-open-title {
+      font-size: 16px;
+      font-weight: 900;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .drink-open-meta {
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .drink-delete {
+      flex: 0 0 auto;
+      border: 0;
+      border-radius: 999px;
+      background: #f5eadc;
+      color: #8d735d;
+      padding: 10px 12px;
+      font-size: 12px;
+      font-weight: 900;
+      cursor: pointer;
     }
 
     .drink-card {
@@ -768,10 +801,6 @@
       .day {
         padding: 10px 10px 12px;
       }
-      .day-count {
-        padding: 3px 7px;
-        font-size: 9px;
-      }
       .day-list {
         flex-direction: row;
         flex-wrap: wrap;
@@ -798,6 +827,9 @@
         bottom: 8px;
         font-size: 24px;
         opacity: 0.18;
+      }
+      .drink-summary {
+        align-items: flex-start;
       }
       .grid-2 { grid-template-columns: 1fr; }
       .actions { flex-direction: column; }
@@ -876,7 +908,7 @@
       </section>
 
       <div class="footer-note">
-        \(\copyright \) 2026 Eee
+        &copy; 2026 Eee
       </div>
     </section>
   </main>
@@ -919,7 +951,7 @@
     const SUGAR_OPTIONS = ["半糖", "微糖", "一分糖", "無糖", "無法調整"];
     const SIZE_OPTIONS = ["中杯", "大杯"];
     const WEEKDAYS = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
-    const DAY_MARKS = ["♡", "☁", "🧊", "✧", "☺", "♥", "☆"];
+    const DAY_MARKS = ["♡", "☁", "🧊", "✧", "♥", "☆"];
     const DRINK_ICON_MARKUP = `
       <svg viewBox="0 0 72 72" role="presentation" aria-hidden="true">
         <path class="doodle-fill" d="M22 20h28l-3 30c-.2 2.8-2.4 5-5.2 5H30.2c-2.8 0-5-2.2-5.2-5L22 20z"></path>
@@ -938,6 +970,7 @@
       currentMonth: getInitialMonth(),
       selectedDate: null,
       modalDrinks: [],
+      activeDrinkIndex: null,
       user: null,
       firebase: null,
       unsubscribe: null,
@@ -986,8 +1019,8 @@
       elements.overlay.addEventListener("click", function (event) {
         if (event.target === elements.overlay) closeModal();
       });
-      elements.addDrinkBtn.addEventListener("click", addDrink);
-      elements.saveBtn.addEventListener("click", saveSelectedDate);
+      elements.addDrinkBtn.addEventListener("click", handleSecondaryAction);
+      elements.saveBtn.addEventListener("click", handlePrimaryAction);
       window.addEventListener("keydown", function (event) {
         if (event.key === "Escape" && elements.overlay.classList.contains("show")) closeModal();
       });
@@ -1223,11 +1256,9 @@
         const drinkPills = drinks.slice(0, 3).map(function (drink) {
           return '<div class="pill"><span class="pill-icon">' + DRINK_ICON_MARKUP + '</span><span class="pill-label">' + escapeHtml(drink.itemName || "飲品") + "</span></div>";
         }).join("");
-        const countClass = drinks.length === 0 ? "day-count is-empty" : "day-count";
-
         tiles.push(
           '<button class="day" type="button" data-date="' + dateKey + '" data-level="' + level + '">' +
-            '<div class="day-top"><div class="day-number">' + day + '</div><div class="' + countClass + '">' + drinks.length + ' 杯</div></div>' +
+            '<div class="day-top"><div class="day-number">' + day + "</div></div>" +
             '<div class="day-list">' + drinkPills + "</div>" +
             (drinks.length > 0 ? '<div class="day-mark">' + DAY_MARKS[day % DAY_MARKS.length] + "</div>" : "") +
           "</button>"
@@ -1243,14 +1274,21 @@
     function openModal(dateKey) {
       state.selectedDate = dateKey;
       state.modalDrinks = deepCopy(state.records[dateKey] || []);
+      state.activeDrinkIndex = null;
       elements.overlay.classList.add("show");
       elements.overlay.setAttribute("aria-hidden", "false");
       renderEditor();
     }
 
     function closeModal() {
+      if (state.activeDrinkIndex !== null) {
+        state.activeDrinkIndex = null;
+        renderEditor();
+        return;
+      }
       state.selectedDate = null;
       state.modalDrinks = [];
+      state.activeDrinkIndex = null;
       elements.overlay.classList.remove("show");
       elements.overlay.setAttribute("aria-hidden", "true");
     }
@@ -1258,12 +1296,40 @@
     function addDrink() {
       if (state.modalDrinks.length >= 3) return;
       state.modalDrinks.push(defaultDrink());
+      state.activeDrinkIndex = state.modalDrinks.length - 1;
       renderEditor();
     }
 
     function removeDrink(index) {
       state.modalDrinks.splice(index, 1);
+      if (state.activeDrinkIndex === index) {
+        state.activeDrinkIndex = null;
+      } else if (state.activeDrinkIndex !== null && index < state.activeDrinkIndex) {
+        state.activeDrinkIndex -= 1;
+      }
       renderEditor();
+    }
+
+    function openDrinkEditor(index) {
+      state.activeDrinkIndex = index;
+      renderEditor();
+    }
+
+    function handleSecondaryAction() {
+      if (state.activeDrinkIndex !== null) {
+        removeDrink(state.activeDrinkIndex);
+        return;
+      }
+      addDrink();
+    }
+
+    async function handlePrimaryAction() {
+      if (state.activeDrinkIndex !== null) {
+        state.activeDrinkIndex = null;
+        renderEditor();
+        return;
+      }
+      await saveSelectedDate();
     }
 
     function updateDrink(index, field, value, shouldRender) {
@@ -1274,37 +1340,64 @@
     // 編輯器渲染：每次異動後重新輸出當日所有飲料欄位
     function renderEditor() {
       elements.modalDateTitle.textContent = state.selectedDate || "";
+      elements.addDrinkBtn.textContent = state.activeDrinkIndex !== null ? "刪除" : "＋ 新增一杯";
+      elements.saveBtn.textContent = state.activeDrinkIndex !== null ? "完成" : "儲存";
 
       if (!state.modalDrinks.length) {
         elements.editorList.innerHTML = '<div class="empty-note">這一天還沒有飲料紀錄</div>';
         return;
       }
 
-      elements.editorList.innerHTML = state.modalDrinks.map(function (drink, index) {
-        return (
-          '<article class="drink-card">' +
-            '<button class="remove-btn" type="button" data-remove="' + index + '" aria-label="刪除">✕</button>' +
-            '<div class="grid-2">' +
-              inputField(index, "shopName", "Shop", "店家名稱", drink.shopName) +
-              inputField(index, "itemName", "Item", "想喝什麼？", drink.itemName) +
-            "</div>" +
-            '<div class="grid-2">' +
-              inputField(index, "price", "Price", "NT$", drink.price, "number") +
-              optionSection(index, "size", "Size", SIZE_OPTIONS, drink.size, "active-blue") +
-            "</div>" +
-            optionSection(index, "ice", "Ice Level", ICE_OPTIONS, drink.ice, "active-blue") +
-            optionSection(index, "sugar", "Sugar Level", SUGAR_OPTIONS, drink.sugar, "active-pink") +
-            '<button class="toggle" type="button" data-toggle="' + index + '" data-on="' + String(Boolean(drink.continueTomorrow)) + '">' +
-              '<span class="toggle-box">' + (drink.continueTomorrow ? "✓" : "") + "</span>" +
-              '<span class="toggle-text">明天繼續喝</span>' +
-            "</button>" +
-          "</article>"
-        );
-      }).join("");
+      if (state.activeDrinkIndex === null) {
+        elements.editorList.innerHTML = state.modalDrinks.map(function (drink, index) {
+          const title = escapeHtml(drink.itemName || "未命名飲料");
+          const meta = [
+            drink.shopName || "未填店家",
+            drink.price ? "NT$ " + escapeHtml(String(drink.price)) : "未填價格",
+            drink.size || "中杯"
+          ].join(" ・ ");
 
-      elements.editorList.querySelectorAll("[data-remove]").forEach(function (button) {
-        button.addEventListener("click", function () { removeDrink(Number(button.dataset.remove)); });
-      });
+          return (
+            '<article class="drink-summary">' +
+              '<button class="drink-open" type="button" data-open-drink="' + index + '">' +
+                '<div class="drink-open-title">' + title + "</div>" +
+                '<div class="drink-open-meta">' + escapeHtml(meta) + "</div>" +
+              "</button>" +
+              '<button class="drink-delete" type="button" data-remove="' + index + '">刪除</button>' +
+            "</article>"
+          );
+        }).join("");
+
+        elements.editorList.querySelectorAll("[data-open-drink]").forEach(function (button) {
+          button.addEventListener("click", function () { openDrinkEditor(Number(button.dataset.openDrink)); });
+        });
+
+        elements.editorList.querySelectorAll("[data-remove]").forEach(function (button) {
+          button.addEventListener("click", function () { removeDrink(Number(button.dataset.remove)); });
+        });
+        return;
+      }
+
+      const drink = state.modalDrinks[state.activeDrinkIndex];
+      const index = state.activeDrinkIndex;
+
+      elements.editorList.innerHTML =
+        '<article class="drink-card">' +
+          '<div class="grid-2">' +
+            inputField(index, "shopName", "Shop", "店家名稱", drink.shopName) +
+            inputField(index, "itemName", "Item", "想喝什麼？", drink.itemName) +
+          "</div>" +
+          '<div class="grid-2">' +
+            inputField(index, "price", "Price", "NT$", drink.price, "number") +
+            optionSection(index, "size", "Size", SIZE_OPTIONS, drink.size, "active-blue") +
+          "</div>" +
+          optionSection(index, "ice", "Ice Level", ICE_OPTIONS, drink.ice, "active-blue") +
+          optionSection(index, "sugar", "Sugar Level", SUGAR_OPTIONS, drink.sugar, "active-pink") +
+          '<button class="toggle" type="button" data-toggle="' + index + '" data-on="' + String(Boolean(drink.continueTomorrow)) + '">' +
+            '<span class="toggle-box">' + (drink.continueTomorrow ? "✓" : "") + "</span>" +
+            '<span class="toggle-text">明天繼續喝</span>' +
+          "</button>" +
+        "</article>";
 
       elements.editorList.querySelectorAll("[data-toggle]").forEach(function (button) {
         button.addEventListener("click", function () {
