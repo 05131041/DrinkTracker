@@ -1,495 +1,1430 @@
+
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
-    <!-- 指定網頁字元編碼為 UTF-8，確保繁體中文不亂碼 -->
-    <meta charset="UTF-8">
-    <!-- 設定響應式視窗屬性，讓網頁在不同裝置上都能正確縮放 -->
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- 網頁頁籤上顯示的標題 -->
-    <title>是多愛喝 2026</title>
-    <!-- 從 CDN 引入 React 核心庫 (版本 18) -->
-    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <!-- 引入 React DOM 庫，用於渲染組件到瀏覽器 -->
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <!-- 引入 Babel 用於在客戶端解析 JSX 語法 -->
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <!-- 引入 Tailwind CSS 框架，提供實用的樣式類別 -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- 引入思源黑體 (Noto Sans TC)，提供美觀的繁體中文顯示 -->
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&display=swap" rel="stylesheet">
-    
-    <!-- 引入傳統相容版 Firebase SDK（避免使用 type="module" 與 import 語法，解決環境阻擋與 Babel standalone 的衝突問題） -->
-    <script src="https://www.gstatic.com/firebasejs/11.1.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/11.1.0/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/11.1.0/firebase-firestore-compat.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>是多愛喝 2026</title>
+  <!-- Firebase 相容版 SDK：保留原本的 Auth 與 Firestore 同步能力 -->
+  <script src="https://www.gstatic.com/firebasejs/11.1.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/11.1.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/11.1.0/firebase-firestore-compat.js"></script>
+  <style>
+    /* 米色文青主題色票：用暖米、奶茶、鼠尾草取代原本偏粉紫的配色 */
+    :root {
+      --bg-top: #f6efe3;
+      --bg-bottom: #efe6d8;
+      --panel: rgba(255, 250, 244, 0.82);
+      --panel-strong: rgba(255, 252, 247, 0.95);
+      --text: #5f5144;
+      --muted: #9b8977;
+      --accent: #cfa07d;
+      --accent-2: #a8b59a;
+      --accent-3: #e5cfaa;
+      --line: rgba(250, 243, 233, 0.95);
+      --shadow: 0 28px 70px rgba(102, 84, 63, 0.14);
+      --shadow-soft: 0 12px 28px rgba(102, 84, 63, 0.1);
+    }
 
-    <style>
-        /* 設定全域字體優先順序 */
-        body { font-family: 'Noto Sans TC', sans-serif; }
-        /* 夢幻漸層背景樣式 */
-        .dreamy-gradient {
-            background: linear-gradient(135deg, #FDFBFD 0%, #F8F2FC 100%);
-        }
-        /* 定義上下飄浮與旋轉的動畫效果 */
-        @keyframes float {
-            0% { transform: translateY(0px) rotate(0deg); }
-            50% { transform: translateY(-20px) rotate(5deg); }
-            100% { transform: translateY(0px) rotate(0deg); }
-        }
-        /* 套用飄浮動畫到指定類別 */
-        .float-element { animation: float 8s ease-in-out infinite; }
-        /* 毛玻璃面板效果（半透明背景加模糊） */
-        .glass-panel {
-            background: rgba(255, 255, 255, 0.7);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-        }
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #E2F0FB; border-radius: 10px; }
-        /* 按鈕懸停時的微調與陰影光澤 */        
-        .btn-hover-sparkle:hover {
-            box-shadow: 0 0 15px rgba(253, 226, 228, 0.8);
-            transform: scale(1.02);
-        }
-    </style>
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Trebuchet MS", "Segoe UI", "Microsoft JhengHei", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 15% 20%, rgba(225, 199, 168, 0.44), transparent 26%),
+        radial-gradient(circle at 85% 18%, rgba(198, 207, 180, 0.42), transparent 24%),
+        radial-gradient(circle at 78% 82%, rgba(236, 220, 188, 0.55), transparent 20%),
+        linear-gradient(160deg, var(--bg-top), var(--bg-bottom));
+    }
+
+    button, input { font: inherit; }
+
+    .shell {
+      width: min(1120px, calc(100vw - 24px));
+      margin: 28px auto;
+      position: relative;
+    }
+
+    .orb {
+      position: fixed;
+      z-index: 0;
+      border-radius: 999px;
+      filter: blur(24px);
+      opacity: 0.48;
+      pointer-events: none;
+      animation: drift 14s ease-in-out infinite;
+    }
+
+    .orb-a {
+      width: 180px;
+      height: 180px;
+      top: 60px;
+      left: 4vw;
+      background: rgba(214, 186, 153, 0.55);
+    }
+
+    .orb-b {
+      width: 240px;
+      height: 240px;
+      right: 3vw;
+      bottom: 8vh;
+      background: rgba(191, 204, 179, 0.48);
+      animation-delay: -5s;
+    }
+
+    .card {
+      position: relative;
+      z-index: 1;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 44px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(26px);
+      overflow: hidden;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 20px;
+      padding: 30px 32px 18px;
+    }
+
+    .title-wrap {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      position: relative;
+    }
+
+    .bubble-icon {
+      width: 66px;
+      height: 66px;
+      border-radius: 22px;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(135deg, rgba(255, 252, 247, 0.96), rgba(241, 228, 210, 0.92));
+      box-shadow: var(--shadow-soft);
+      flex: 0 0 auto;
+      position: relative;
+      isolation: isolate;
+    }
+
+    .bubble-icon::before,
+    .bubble-icon::after {
+      position: absolute;
+      color: rgba(255, 255, 255, 0.9);
+      font-size: 12px;
+      line-height: 1;
+      z-index: 2;
+    }
+
+    .bubble-icon::before {
+      content: "✦";
+      top: 8px;
+      right: 10px;
+      transform: rotate(10deg);
+    }
+
+    .bubble-icon::after {
+      content: "♡";
+      left: 8px;
+      bottom: 8px;
+      transform: rotate(-10deg);
+    }
+
+    .bubble-icon--hero {
+      transform: rotate(-7deg);
+    }
+
+    .bubble-icon--modal {
+      transform: rotate(-4deg);
+    }
+
+    .bubble-icon svg {
+      width: 78%;
+      height: 78%;
+      overflow: visible;
+    }
+
+    .doodle-stroke {
+      fill: none;
+      stroke: rgba(255, 252, 247, 0.98);
+      stroke-width: 2.6;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .doodle-fill {
+      fill: rgba(205, 169, 131, 0.92);
+      stroke: rgba(255, 252, 247, 0.98);
+      stroke-width: 2.4;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .title-copy {
+      position: relative;
+    }
+
+    .title-copy::after {
+      content: "today's little sips";
+      display: block;
+      margin-top: 8px;
+      color: rgba(155, 137, 119, 0.82);
+      font-size: 12px;
+      letter-spacing: 0.12em;
+      text-transform: lowercase;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(32px, 5vw, 50px);
+      line-height: 0.95;
+      letter-spacing: -0.05em;
+      font-style: italic;
+    }
+
+    .subtitle {
+      margin: 6px 0 0;
+      color: var(--muted);
+      letter-spacing: 0.26em;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    .month-bar {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 10px 14px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.68);
+      border: 1px solid rgba(255, 255, 255, 0.8);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65);
+    }
+
+    .month-btn {
+      width: 42px;
+      height: 42px;
+      border: 0;
+      border-radius: 999px;
+      background: white;
+      color: var(--text);
+      cursor: pointer;
+      box-shadow: var(--shadow-soft);
+      transition: transform 140ms ease, box-shadow 140ms ease;
+    }
+
+    .month-btn:hover { transform: translateY(-1px) scale(1.04); }
+
+    .month-label {
+      min-width: 106px;
+      text-align: center;
+    }
+
+    .month-label strong {
+      display: block;
+      font-size: 28px;
+      line-height: 1;
+    }
+
+    .month-label span {
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+    }
+
+    .status-wrap {
+      padding: 0 32px 18px;
+    }
+
+    .status {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 14px 18px;
+      border-radius: 20px;
+      background: rgba(255, 255, 255, 0.84);
+      border: 1px solid rgba(255, 255, 255, 0.92);
+      box-shadow: var(--shadow-soft);
+    }
+
+    .status-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .status-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 999px;
+      flex: 0 0 auto;
+      background: #c3a78c;
+      box-shadow: 0 0 0 5px rgba(195, 167, 140, 0.18);
+    }
+
+    .status-dot.ok {
+      background: #91a17d;
+      box-shadow: 0 0 0 5px rgba(145, 161, 125, 0.18);
+    }
+
+    .status-dot.warn {
+      background: #cda16f;
+      box-shadow: 0 0 0 5px rgba(205, 161, 111, 0.18);
+    }
+
+    .status-dot.error {
+      background: #c98776;
+      box-shadow: 0 0 0 5px rgba(201, 135, 118, 0.18);
+    }
+
+    .status-text {
+      min-width: 0;
+    }
+
+    .status-title {
+      font-weight: 900;
+      font-size: 14px;
+    }
+
+    .status-detail {
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 12px;
+      word-break: break-word;
+    }
+
+    .status-meta {
+      font-size: 11px;
+      font-weight: 800;
+      color: var(--muted);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 16px;
+      padding: 0 32px 28px;
+    }
+
+    .stat {
+      padding: 20px;
+      border-radius: 28px;
+      border: 1px solid rgba(255,255,255,0.9);
+      box-shadow: var(--shadow-soft);
+      background: var(--panel-strong);
+    }
+
+    .stat:nth-child(1) { background: linear-gradient(180deg, rgba(246, 233, 215, 0.96), rgba(255,255,255,0.92)); }
+    .stat:nth-child(2) { background: linear-gradient(180deg, rgba(233, 239, 227, 0.96), rgba(255,255,255,0.92)); }
+    .stat:nth-child(3) { background: linear-gradient(180deg, rgba(243, 235, 219, 0.96), rgba(255,255,255,0.92)); }
+
+    .stat-label {
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.18em;
+      color: var(--muted);
+      text-transform: uppercase;
+    }
+
+    .stat-value {
+      margin-top: 8px;
+      font-size: clamp(22px, 4vw, 34px);
+      font-weight: 900;
+    }
+
+    .calendar { padding: 0 32px 34px; }
+
+    .weekdays, .days {
+      display: grid;
+      grid-template-columns: repeat(7, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .weekdays {
+      margin-bottom: 12px;
+      padding: 0 6px;
+    }
+
+    .weekday {
+      text-align: center;
+      font-size: 12px;
+      color: var(--muted);
+      font-weight: 800;
+      letter-spacing: 0.14em;
+    }
+
+    .day, .day-empty {
+      min-height: 138px;
+      border-radius: 28px;
+    }
+
+    .day {
+      position: relative;
+      border: 1px solid rgba(255,255,255,0.92);
+      background: rgba(255,255,255,0.58);
+      box-shadow: var(--shadow-soft);
+      cursor: pointer;
+      padding: 14px 12px;
+      text-align: left;
+      transition: transform 150ms ease, box-shadow 150ms ease, background 150ms ease;
+      overflow: hidden;
+    }
+
+    .day:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 22px 34px rgba(109, 89, 130, 0.18);
+      background: rgba(255,255,255,0.86);
+    }
+
+    .day-empty { background: transparent; }
+    .day[data-level="0"] { background: rgba(255, 255, 255, 0.96); }
+    .day[data-level="1"] { background: rgba(245, 233, 217, 0.9); }
+    .day[data-level="2"] { background: linear-gradient(180deg, rgba(239, 225, 205, 0.94), rgba(255,255,255,0.76)); }
+    .day[data-level="3"] { background: linear-gradient(180deg, rgba(220, 195, 165, 0.98), rgba(239, 226, 205, 0.92)); }
+
+    .day-top {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .day-number {
+      font-size: 14px;
+      font-weight: 900;
+    }
+
+    .day-count {
+      padding: 4px 8px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.78);
+      border: 1px solid rgba(255, 255, 255, 0.94);
+      color: #8f7964;
+      font-size: 10px;
+      font-weight: 900;
+      letter-spacing: 0.06em;
+      white-space: nowrap;
+    }
+
+    .day-count.is-empty {
+      color: #b09d8d;
+      background: rgba(255, 255, 255, 0.9);
+    }
+
+    .day-list {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-top: 10px;
+    }
+
+    .pill {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      min-width: 0;
+      padding: 5px 8px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.78);
+      border: 1px solid rgba(255,255,255,0.92);
+      font-size: 11px;
+      font-weight: 700;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .pill-label {
+      display: block;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .pill-more {
+      justify-content: center;
+      color: #8f7964;
+      background: rgba(255, 248, 240, 0.92);
+      border-style: dashed;
+    }
+
+    .mobile-more {
+      display: none;
+      padding-left: 4px;
+      color: #8f7964;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+    }
+
+    .pill-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: linear-gradient(180deg, var(--accent), #b8865d);
+      flex: 0 0 auto;
+    }
+
+    .day-mark {
+      position: absolute;
+      right: 10px;
+      bottom: 8px;
+      font-size: 32px;
+      opacity: 0.16;
+      line-height: 1;
+    }
+
+    .footer-note {
+      padding: 0 32px 30px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(96, 79, 59, 0.22);
+      backdrop-filter: blur(14px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
+      z-index: 10;
+    }
+
+    .overlay.show { display: flex; }
+
+    .modal {
+      width: min(860px, 100%);
+      max-height: min(88vh, 960px);
+      overflow: auto;
+      padding: 26px;
+      border-radius: 38px;
+      background: rgba(255,255,255,0.94);
+      box-shadow: 0 40px 80px rgba(88, 70, 50, 0.18);
+      border: 1px solid rgba(255,255,255,0.96);
+    }
+
+    .modal-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    .modal-title {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .modal-title h2 {
+      margin: 0;
+      font-size: clamp(24px, 4vw, 34px);
+      font-style: italic;
+      letter-spacing: -0.04em;
+    }
+
+    .close-btn, .remove-btn {
+      border: 0;
+      cursor: pointer;
+      display: inline-grid;
+      place-items: center;
+    }
+
+    .close-btn {
+      width: 44px;
+      height: 44px;
+      border-radius: 999px;
+      background: #f5eadc;
+      color: #8d735d;
+    }
+
+    .editor-list {
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    .drink-card {
+      position: relative;
+      padding: 18px;
+      border-radius: 28px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(247, 241, 232, 0.98));
+      border: 1px solid rgba(234, 223, 206, 0.95);
+      box-shadow: var(--shadow-soft);
+    }
+
+    .remove-btn {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      width: 34px;
+      height: 34px;
+      border-radius: 999px;
+      background: #fff;
+      color: #a67c62;
+      box-shadow: var(--shadow-soft);
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+      margin-bottom: 16px;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+
+    .field label, .option-label {
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      padding-left: 4px;
+    }
+
+    .text-input {
+      width: 100%;
+      padding: 14px 16px;
+      border: 1px solid rgba(224, 210, 191, 0.95);
+      border-radius: 18px;
+      background: #fff;
+      color: var(--text);
+      outline: none;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.92);
+    }
+
+    .text-input:focus {
+      border-color: #cbb291;
+      box-shadow: 0 0 0 4px rgba(203, 178, 145, 0.2);
+    }
+
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 6px;
+    }
+
+    .chip {
+      border: 1px solid rgba(224, 210, 191, 0.95);
+      background: #fff;
+      color: var(--muted);
+      padding: 9px 14px;
+      border-radius: 999px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 700;
+      transition: background 120ms ease, color 120ms ease, transform 120ms ease;
+    }
+
+    .chip:hover { transform: translateY(-1px); }
+    .chip.active-blue { color: #6c7a5d; background: rgba(228, 235, 219, 0.96); border-color: rgba(228, 235, 219, 0.96); }
+    .chip.active-pink { color: #8a6a52; background: rgba(241, 228, 211, 0.96); border-color: rgba(241, 228, 211, 0.96); }
+
+    .toggle {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 16px;
+      margin-top: 12px;
+      border-radius: 18px;
+      border: 1px solid rgba(224, 210, 191, 0.95);
+      background: white;
+      cursor: pointer;
+    }
+
+    .toggle-box {
+      width: 24px;
+      height: 24px;
+      border-radius: 8px;
+      border: 2px solid rgba(224, 210, 191, 1);
+      display: grid;
+      place-items: center;
+      flex: 0 0 auto;
+      background: white;
+      color: white;
+      font-size: 14px;
+      transition: background 120ms ease, border-color 120ms ease;
+    }
+
+    .toggle[data-on="true"] .toggle-box {
+      background: linear-gradient(180deg, #d9b792, #bf8f67);
+      border-color: #bf8f67;
+    }
+
+    .toggle-text {
+      font-weight: 800;
+      color: var(--text);
+    }
+
+    .actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 20px;
+    }
+
+    .action-btn {
+      flex: 1;
+      border: 0;
+      border-radius: 20px;
+      padding: 16px 20px;
+      font-weight: 900;
+      cursor: pointer;
+      transition: transform 140ms ease, box-shadow 140ms ease;
+    }
+
+    .action-btn:hover { transform: translateY(-2px); }
+    .action-add { background: rgba(255,255,255,0.96); color: var(--muted); border: 1px dashed #d5c0a6; }
+    .action-save { background: linear-gradient(180deg, #e1c29e, #c89f76); color: #5f4a39; box-shadow: 0 18px 30px rgba(200, 159, 118, 0.3); }
+
+    .empty-note {
+      padding: 18px 20px;
+      text-align: center;
+      color: var(--muted);
+      font-weight: 700;
+      border-radius: 24px;
+      background: rgba(248, 242, 234, 0.9);
+      border: 1px dashed #d5c0a6;
+    }
+
+    @keyframes drift {
+      0%, 100% { transform: translateY(0) translateX(0); }
+      50% { transform: translateY(-14px) translateX(8px); }
+    }
+
+    @media (max-width: 860px) {
+      .header, .status-wrap, .stats, .calendar, .footer-note {
+        padding-left: 18px;
+        padding-right: 18px;
+      }
+
+      .header {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .title-wrap {
+        gap: 12px;
+      }
+
+      .bubble-icon {
+        width: 58px;
+        height: 58px;
+      }
+
+      .title-copy::after {
+        font-size: 11px;
+        margin-top: 6px;
+      }
+
+      .month-bar { justify-content: space-between; }
+      .status { flex-direction: column; align-items: flex-start; }
+      .stats { grid-template-columns: 1fr; }
+      .day, .day-empty { min-height: 118px; }
+      .day {
+        padding: 10px 10px 12px;
+      }
+      .day-count {
+        padding: 3px 7px;
+        font-size: 9px;
+      }
+      .day-list {
+        gap: 5px;
+        margin-top: 8px;
+      }
+      .day-list .pill {
+        font-size: 10px;
+        padding: 4px 7px;
+      }
+      .day-list .pill:nth-child(n+2) {
+        display: none;
+      }
+      .pill-label {
+        white-space: normal;
+        display: -webkit-box;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 2;
+        line-height: 1.25;
+      }
+      .mobile-more {
+        display: block;
+      }
+      .day-mark {
+        right: 8px;
+        bottom: 8px;
+        font-size: 24px;
+        opacity: 0.18;
+      }
+      .grid-2 { grid-template-columns: 1fr; }
+      .actions { flex-direction: column; }
+    }
+  </style>
 </head>
-<body class="dreamy-gradient min-h-screen text-[#94849A]">
-    <!-- React 應用程式的渲染根目錄 -->
-    <div id="root"></div>
+<body>
+  <!-- 背景裝飾：用柔和色塊增加文青感，不影響主要資訊閱讀 -->
+  <div class="orb orb-a"></div>
+  <div class="orb orb-b"></div>
 
-    <!-- 傳統非同步與安全同步包裝層，無須 type="module"，在任何瀏覽器/本機開啟皆能 100% 成功執行 -->
-    <script>
-        // Firebase 資料庫連線配置
-        const firebaseConfig = typeof __firebase_config !== 'undefined' 
-            ? JSON.parse(__firebase_config) 
-            : { 
-                apiKey: "AIzaSyCFnYhdOMJNAxCnVoUDxDtAItKQjURd14w", 
-                authDomain: "drinks-4eb2c.firebaseapp.com", 
-                projectId: "drinks-4eb2c", 
-                storageBucket: "drinks-4eb2c.firebasestorage.app", 
-                messagingSenderId: "394916838880", 
-                appId: "1:394916838880:web:ebe01d2df44542f0347f85" 
-            };
-
-        // 初始化 Firebase 相容版實例
-        firebase.initializeApp(firebaseConfig);
-        const auth = firebase.auth();
-        const db = firebase.firestore();
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'drink-tracker-2026';
-
-        // 建立 window.FB 橋接，將傳統 SDK 對象包裝成 React 代碼所期待的 v9 模組化 API 格式
-        window.FB = { 
-            db, 
-            auth, 
-            appId, 
-            doc: (dbInstance, ...pathSegments) => {
-                // 將路徑段數串接，呼叫 compat 的 doc() 獲取 Reference
-                return dbInstance.doc(pathSegments.join('/'));
-            }, 
-            setDoc: async (docRef, data) => {
-                // 將 setDoc 映射至 DocumentReference.set()
-                return docRef.set(data);
-            }, 
-            onSnapshot: (docRef, callback, errorCallback) => {
-                // 映射 onSnapshot 並封裝 DocumentSnapshot, 使其可以用 snap.exists() 函數
-                return docRef.onSnapshot((compatSnap) => {
-                    const wrappedSnap = {
-                        exists: () => compatSnap.exists,
-                        data: () => compatSnap.data()
-                    };
-                    callback(wrappedSnap);
-                }, errorCallback);
-            }, 
-            collection: () => {}, 
-            signInAnonymously: () => auth.signInAnonymously(),
-            signInWithCustomToken: (token) => auth.signInWithCustomToken(token), 
-            onAuthStateChanged: (cb) => auth.onAuthStateChanged(cb) 
-        };
-    </script>
-
-    <!-- React 邏輯實作 (JSX) -->
-    <script type="text/babel">
-        // 從 React 物件解構出 Hook
-        const { useState, useEffect, useMemo } = React;
-
-        // 珍珠奶茶圖標圖組件 (使用 SVG)
-        const IconBoba = ({className}) => (
-            <svg className={className} viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M18 14L22 52C22 55.3137 24.6863 58 28 58H36C39.3137 58 42 55.3137 42 52L46 14" stroke="currentColor" strokeWidth="3" strokeLinecap="round"/>
-                <path d="M16 14H48" stroke="currentColor" strokeWidth="3" strokeLinecap="round"/>
-                <path d="M40 6L36 14" stroke="currentColor" strokeWidth="3" strokeLinecap="round"/>
-                <circle cx="28" cy="48" r="2.5" fill="currentColor"/>
-                <circle cx="36" cy="46" r="2.5" fill="currentColor"/>
-                <circle cx="32" cy="52" r="2.5" fill="currentColor"/>
-                <circle cx="26" cy="42" r="2.5" fill="currentColor"/>
-                <circle cx="38" cy="40" r="2.5" fill="currentColor"/>
-                <path d="M22 28C22 28 26 30 32 30C38 30 42 28 42 28" stroke="currentColor" strokeWidth="2" strokeLinecap="round" opacity="0.3"/>
+  <!-- 主畫面：月份切換、同步狀態、月曆與統計資訊 -->
+  <main class="shell">
+    <section class="card">
+      <header class="header">
+        <div class="title-wrap">
+          <div class="bubble-icon bubble-icon--hero" aria-hidden="true">
+            <svg viewBox="0 0 72 72" role="presentation">
+              <path class="doodle-fill" d="M22 20h28l-3 30c-.2 2.8-2.4 5-5.2 5H30.2c-2.8 0-5-2.2-5.2-5L22 20z"></path>
+              <path class="doodle-stroke" d="M20 20h32"></path>
+              <path class="doodle-stroke" d="M42 12l-4 8"></path>
+              <path class="doodle-stroke" d="M27 31c2 1.3 5.2 2 9 2 3.7 0 6.9-.7 9-2"></path>
+              <circle cx="30" cy="46" r="2.4" fill="rgba(255,252,247,0.98)"></circle>
+              <circle cx="37" cy="49" r="2.4" fill="rgba(255,252,247,0.98)"></circle>
+              <circle cx="42" cy="43" r="2.4" fill="rgba(255,252,247,0.98)"></circle>
+              <path class="doodle-stroke" d="M13 22c2.4-2.2 5.7-2.4 8.2-.8"></path>
+              <path class="doodle-stroke" d="M52 15c1.2 1.3 2 2.8 2.2 4.6"></path>
             </svg>
+          </div>
+          <div class="title-copy">
+            <h1>是多愛喝</h1>
+            <p class="subtitle">2026 Drink Tracker</p>
+          </div>
+        </div>
+        <div class="month-bar">
+          <button class="month-btn" id="prevMonth" type="button" aria-label="上一月">&lt;</button>
+          <div class="month-label">
+            <strong id="yearLabel"></strong>
+            <span id="monthLabel"></span>
+          </div>
+          <button class="month-btn" id="nextMonth" type="button" aria-label="下一月">&gt;</button>
+        </div>
+      </header>
+
+      <section class="status-wrap">
+        <div class="status">
+          <div class="status-left">
+            <div class="status-dot" id="statusDot"></div>
+            <div class="status-text">
+              <div class="status-title" id="statusTitle">正在初始化 Firebase…</div>
+              <div class="status-detail" id="statusDetail">頁面會先載入快取，再嘗試同步雲端資料。</div>
+            </div>
+          </div>
+          <div class="status-meta" id="statusMeta">cache</div>
+        </div>
+      </section>
+
+      <section class="stats">
+        <div class="stat">
+          <div class="stat-label">Monthly Total</div>
+          <div class="stat-value" id="cupsValue">0 杯</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Expense</div>
+          <div class="stat-value" id="costValue">$0</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Favorite Shop</div>
+          <div class="stat-value" id="shopValue">無紀錄</div>
+        </div>
+      </section>
+
+      <section class="calendar">
+        <div class="weekdays" id="weekdayRow"></div>
+        <div class="days" id="daysGrid"></div>
+      </section>
+
+      <div class="footer-note">
+        這份版本保留 Firebase 連線，但移除了 React、Babel、Tailwind CDN 依賴，避免 `file:///` 開啟時因前端框架載入失敗而整頁空白。
+        若 Firebase Auth 在 `file:///` 下被瀏覽器限制，畫面會顯示原因，並先用本機快取維持可操作。
+      </div>
+    </section>
+  </main>
+
+  <!-- 編輯彈窗：集中處理單日飲料紀錄 -->
+      <div class="overlay" id="overlay" aria-hidden="true">
+    <section class="modal" role="dialog" aria-modal="true" aria-labelledby="modalDateTitle">
+      <div class="modal-head">
+        <div class="modal-title">
+          <div class="bubble-icon bubble-icon--modal" style="width:56px;height:56px;" aria-hidden="true">
+            <svg viewBox="0 0 72 72" role="presentation">
+              <path class="doodle-fill" d="M22 20h28l-3 30c-.2 2.8-2.4 5-5.2 5H30.2c-2.8 0-5-2.2-5.2-5L22 20z"></path>
+              <path class="doodle-stroke" d="M20 20h32"></path>
+              <path class="doodle-stroke" d="M42 12l-4 8"></path>
+              <path class="doodle-stroke" d="M27 31c2 1.3 5.2 2 9 2 3.7 0 6.9-.7 9-2"></path>
+              <circle cx="30" cy="46" r="2.4" fill="rgba(255,252,247,0.98)"></circle>
+              <circle cx="37" cy="49" r="2.4" fill="rgba(255,252,247,0.98)"></circle>
+              <circle cx="42" cy="43" r="2.4" fill="rgba(255,252,247,0.98)"></circle>
+            </svg>
+          </div>
+          <div>
+            <div class="subtitle" style="margin:0;">Drink Editor</div>
+            <h2 id="modalDateTitle"></h2>
+          </div>
+        </div>
+        <button class="close-btn" id="closeModal" type="button" aria-label="關閉">✕</button>
+      </div>
+      <div class="editor-list" id="editorList"></div>
+      <div class="actions">
+        <button class="action-btn action-add" id="addDrinkBtn" type="button">＋ 新增一杯</button>
+        <button class="action-btn action-save" id="saveBtn" type="button">儲存到 Firebase</button>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    // 資料與選項常數：集中管理 Firebase 快取鍵、固定選單與日期裝飾符號
+    const CACHE_KEY = "drink-tracker-2026-firebase-cache";
+    const ICE_OPTIONS = ["正常冰", "少冰", "微冰", "去冰", "常溫", "熱", "無法調整"];
+    const SUGAR_OPTIONS = ["半糖", "微糖", "一分糖", "無糖", "無法調整"];
+    const SIZE_OPTIONS = ["中杯", "大杯"];
+    const WEEKDAYS = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
+    const DAY_MARKS = ["♡", "☁", "🧊", "✧", "☺", "♥", "☆"];
+
+    // 全域狀態：把目前月曆、Firebase 連線與編輯中的資料都收在這裡
+    const state = {
+      records: loadCache(),
+      currentMonth: getInitialMonth(),
+      selectedDate: null,
+      modalDrinks: [],
+      user: null,
+      firebase: null,
+      unsubscribe: null,
+      status: {
+        level: "warn",
+        title: "正在初始化 Firebase…",
+        detail: "頁面會先載入快取，再嘗試同步雲端資料。",
+        meta: "cache"
+      }
+    };
+
+    const elements = {
+      yearLabel: document.getElementById("yearLabel"),
+      monthLabel: document.getElementById("monthLabel"),
+      cupsValue: document.getElementById("cupsValue"),
+      costValue: document.getElementById("costValue"),
+      shopValue: document.getElementById("shopValue"),
+      weekdayRow: document.getElementById("weekdayRow"),
+      daysGrid: document.getElementById("daysGrid"),
+      overlay: document.getElementById("overlay"),
+      modalDateTitle: document.getElementById("modalDateTitle"),
+      editorList: document.getElementById("editorList"),
+      addDrinkBtn: document.getElementById("addDrinkBtn"),
+      saveBtn: document.getElementById("saveBtn"),
+      statusDot: document.getElementById("statusDot"),
+      statusTitle: document.getElementById("statusTitle"),
+      statusDetail: document.getElementById("statusDetail"),
+      statusMeta: document.getElementById("statusMeta")
+    };
+
+    init();
+
+    // 啟動流程：先畫出靜態畫面，再綁定事件與 Firebase 同步
+    function init() {
+      renderWeekdays();
+      render();
+      setupEvents();
+      setupFirebase();
+    }
+
+    // 事件綁定：處理月份切換、彈窗開關、鍵盤 ESC 與編輯按鈕
+    function setupEvents() {
+      document.getElementById("prevMonth").addEventListener("click", function () { changeMonth(-1); });
+      document.getElementById("nextMonth").addEventListener("click", function () { changeMonth(1); });
+      document.getElementById("closeModal").addEventListener("click", closeModal);
+      elements.overlay.addEventListener("click", function (event) {
+        if (event.target === elements.overlay) closeModal();
+      });
+      elements.addDrinkBtn.addEventListener("click", addDrink);
+      elements.saveBtn.addEventListener("click", saveSelectedDate);
+      window.addEventListener("keydown", function (event) {
+        if (event.key === "Escape" && elements.overlay.classList.contains("show")) closeModal();
+      });
+    }
+
+    // Firebase 初始化：建立 app、登入 Auth，並在成功後接上 Firestore 即時監聽
+    function setupFirebase() {
+      try {
+        if (!window.firebase) {
+          setStatus("error", "Firebase SDK 載入失敗", "瀏覽器沒有載入到 Firebase CDN，先使用本機快取。", "cache");
+          return;
+        }
+
+        const firebaseConfig = typeof __firebase_config !== "undefined"
+          ? JSON.parse(__firebase_config)
+          : {
+              apiKey: "AIzaSyCFnYhdOMJNAxCnVoUDxDtAItKQjURd14w",
+              authDomain: "drinks-4eb2c.firebaseapp.com",
+              projectId: "drinks-4eb2c",
+              storageBucket: "drinks-4eb2c.firebasestorage.app",
+              messagingSenderId: "394916838880",
+              appId: "1:394916838880:web:ebe01d2df44542f0347f85"
+            };
+
+        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+
+        state.firebase = {
+          auth: firebase.auth(),
+          db: firebase.firestore(),
+          appId: typeof __app_id !== "undefined" ? __app_id : "drink-tracker-2026"
+        };
+
+        setStatus("warn", "正在登入 Firebase…", "登入成功後會自動同步雲端資料。", location.protocol === "file:" ? "file://" : "cloud");
+
+        state.firebase.auth.onAuthStateChanged(function (user) {
+          state.user = user;
+          if (user) {
+            setStatus("ok", "已連上 Firebase", user.isAnonymous ? "匿名登入成功，正在同步資料。" : "登入成功，正在同步資料。", "cloud");
+            subscribeRecords();
+          }
+        });
+
+        beginSignIn();
+      } catch (error) {
+        setStatus("error", "Firebase 初始化失敗", humanizeError(error), "cache");
+      }
+    }
+
+    // 登入策略：優先使用環境提供的 token，否則退回匿名登入
+    async function beginSignIn() {
+      try {
+        if (!state.firebase) return;
+
+        if (typeof __initial_auth_token !== "undefined" && __initial_auth_token) {
+          await state.firebase.auth.signInWithCustomToken(__initial_auth_token);
+        } else {
+          await state.firebase.auth.signInAnonymously();
+        }
+      } catch (error) {
+        setStatus(
+          "error",
+          "Firebase 登入失敗",
+          humanizeError(error),
+          location.protocol === "file:" ? "file://" : "cache"
         );
+      }
+    }
 
-        // 隨機小圖示庫
-        const RandomIcons = [
-            // 冰淇淋
-            (props) => <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M7 11c0-2.8 2.2-5 5-5s5 2.2 5 5c0 1.1-.4 2.1-1 3H8c-.6-.9-1-1.9-1-3zM12 14v7M9 14l3 7 3-7" /></svg>,
-            // 咖啡杯
-            (props) => <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 8h1a4 4 0 110 8h-1M3 8h14v9a4 4 0 01-4 4H7a4 4 0 01-4-4V8zM6 2v2M10 2v2M14 2v2" /></svg>,
-            // 櫻桃
-            (props) => <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="7" cy="18" r="4"/><circle cx="17" cy="18" r="4"/><path d="M9 14.5c0-4 3.5-7.5 7.5-7.5M17 14.5V2" /></svg>,
-            // 甜甜圈
-            (props) => <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/></svg>,
-            // 熱飲
-            (props) => <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 8h1a4 4 0 010 8h-1M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8zM14 2c0 1-1 1-1 2s1 1 1 2M10 2c0 1-1 1-1 2s1 1 1 2M6 2c0 1-1 1-1 2s1 1 1 2" /></svg>,
-            // 蘇打
-            (props) => <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M7 22h10V5H7v17zM12 5V2M15 2h-6M10 10c0-1 1-1 1-2M13 14c0-1 1-1 1-2" /></svg>
-        ];
+    // Firestore 監聽：把雲端 records 持續同步到本機狀態與快取
+    function subscribeRecords() {
+      try {
+        if (!state.firebase || !state.user) return;
+        if (state.unsubscribe) state.unsubscribe();
 
-        const IconHeart = ({fill, className}) => <svg className={className} fill={fill || "none"} stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>;
-        const IconStar = ({fill, className}) => <svg className={className} fill={fill || "none"} stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.382-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"></path></svg>;
+        const docPath = ["artifacts", state.firebase.appId, "public", "data", "drinkRecords", "all"].join("/");
+        const docRef = state.firebase.db.doc(docPath);
 
-        // 定義表單中使用的固定選項常數
-        const ICE_OPTIONS = ['正常冰', '少冰', '微冰', '去冰', '常溫', '熱', '無法調整'];
-        const SUGAR_OPTIONS = ['半糖', '微糖', '一分糖', '無糖', '無法調整'];
+        state.unsubscribe = docRef.onSnapshot(function (snapshot) {
+          if (snapshot.exists) {
+            const data = snapshot.data() || {};
+            state.records = data.records || {};
+          } else {
+            state.records = {};
+          }
+          persistCache();
+          setStatus("ok", "已同步 Firebase", "雲端資料載入完成。", "cloud");
+          render();
+        }, function (error) {
+          setStatus("error", "Firebase 同步失敗", humanizeError(error), "cache");
+          renderStatus();
+        });
+      } catch (error) {
+        setStatus("error", "Firebase 監聽失敗", humanizeError(error), "cache");
+      }
+    }
 
-        // 主應用程式組件
-        function App() {
-            // 使用者認證狀態
-            const [user, setUser] = useState(null);
-            
-            // 當前月曆顯示的月份 (智慧定位：若當前系統時間為 2026 年，進入網頁自動跳轉到當下月份，否則預設為 2026 年 1 月 1 日)
-            const [currentMonth, setCurrentMonth] = useState(() => {
-                const now = new Date();
-                if (now.getFullYear() === 2026) {
-                    return new Date(2026, now.getMonth(), 1);
-                }
-                return new Date(2026, 0, 1);
-            });
-            
-            // 從資料庫同步的飲水紀錄
-            const [records, setRecords] = useState({});
-            // 使用者點選的特定日期物件
-            const [selectedDate, setSelectedDate] = useState(null);
-            // 編輯彈窗的開關狀態
-            const [isModalOpen, setIsModalOpen] = useState(false);
-            // 資料載入進度標記
-            const [loading, setLoading] = useState(true);
+    // 儲存策略：先更新本機快取，再嘗試把最新資料寫回 Firebase
+    async function pushRecords(nextRecords) {
+      persistCache();
 
-            // 初始副作用：處理 Firebase 登入邏輯
-            useEffect(() => {
-                const checkFB = setInterval(() => {
-                    if (window.FB) {
-                        clearInterval(checkFB);
-                        const { onAuthStateChanged, signInAnonymously, signInWithCustomToken } = window.FB;
-                        
-                        const initAuth = async () => {
-                            try {
-                                // 優先使用環境提供的 Token 登入，否則匿名登入
-                                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                                    await signInWithCustomToken(__initial_auth_token);
-                                } else {
-                                    await signInAnonymously();
-                                }
-                            } catch (error) {
-                                console.error("Authentication failed:", error);
-                            }
-                        };
-                        
-                        initAuth();
-                        onAuthStateChanged(setUser);
-                    }
-                }, 100);
-            }, []);
+      if (!state.firebase || !state.user) {
+        setStatus("warn", "尚未寫入 Firebase", "目前先存到本機快取；等 Firebase 可用後再同步。", "cache");
+        renderStatus();
+        return;
+      }
 
-            // 資料同步副作用：監聽雲端資料庫的變動
-            useEffect(() => {
-                if (!user || !window.FB) return;
-                const { db, appId, doc, onSnapshot } = window.FB;
-                // 修正路徑段數為偶數：artifacts/{appId}/public/data/drinkRecords/all
-                const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'drinkRecords', 'all');
-                const unsub = onSnapshot(docRef, (snap) => {
-                    if (snap.exists()) setRecords(snap.data().records || {});
-                }, (err) => console.error("Firestore Error:", err));
-                return () => unsub();
-            }, [user]);
+      try {
+        setStatus("warn", "正在寫入 Firebase…", "請稍候，資料正在儲存。", "cloud");
+        renderStatus();
 
-            // 上傳資料到雲端的非同步函式
-            const saveToCloud = async (newRecords) => {
-                if (!user || !window.FB) return;
-                const { db, appId, doc, setDoc } = window.FB;
-                // 修正路徑段數為偶數：artifacts/{appId}/public/data/drinkRecords/all
-                const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'drinkRecords', 'all');
-                await setDoc(docRef, { records: newRecords });
-            };
+        const docPath = ["artifacts", state.firebase.appId, "public", "data", "drinkRecords", "all"].join("/");
+        const docRef = state.firebase.db.doc(docPath);
+        await docRef.set({ records: nextRecords });
 
-            // 將日期物件轉換為 YYYY-MM-DD 字串的格式化函式
-            const formatDate = (date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+        setStatus("ok", "已同步 Firebase", "儲存完成。", "cloud");
+        renderStatus();
+      } catch (error) {
+        setStatus("error", "Firebase 寫入失敗", humanizeError(error), "cache");
+        renderStatus();
+      }
+    }
 
-            const changeMonth = (offset) => {
-                const nextDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + offset, 1);
-                setCurrentMonth(nextDate);
-            };
+    // 快取讀寫：Firebase 暫時不可用時，仍能保留最近一次的資料
+    function loadCache() {
+      try {
+        const raw = localStorage.getItem(CACHE_KEY);
+        const parsed = raw ? JSON.parse(raw) : {};
+        return parsed && typeof parsed === "object" ? parsed : {};
+      } catch (error) {
+        return {};
+      }
+    }
 
-            // 計算當月統計數據（快取計算結果，避免不必要的重新計算）
-            const monthlyStats = useMemo(() => {
-                const year = currentMonth.getFullYear();
-                const month = currentMonth.getMonth() + 1;
-                const prefix = `${year}-${String(month).padStart(2, '0')}`;
-                let cups = 0, cost = 0;
-                const shops = {};
-                Object.keys(records).forEach(d => {
-                    if (d.startsWith(prefix)) {
-                        (records[d] || []).forEach(r => {
-                            // 若勾選「明天繼續喝」，系統帶出的價格會是空字串
-                            // 我們將空的價格視為「尚未購買/待填寫」，因此不計入杯數與價格
-                            if (r.price !== '' && r.price !== null && r.price !== undefined) {
-                                cups++;
-                                cost += Number(r.price) || 0;
-                            }
-                            if (r.shopName) shops[r.shopName] = (shops[r.shopName] || 0) + 1;
-                        });
-                    }
-                });
-                const fav = Object.entries(shops).sort((a,b) => b[1]-a[1])[0]?.[0] || '無紀錄';
-                return { cups, cost, fav };
-            }, [records, currentMonth]);
+    function persistCache() {
+      localStorage.setItem(CACHE_KEY, JSON.stringify(state.records));
+    }
 
-            const handleSave = (dateStr, drinks) => {
-                let updated = { ...records, [dateStr]: drinks };
-                drinks.forEach(d => {
-                    if (d.continueTomorrow) {
-                        const next = new Date(dateStr);
-                        next.setDate(next.getDate() + 1);
-                        const nStr = formatDate(next);
-                        if (next.getFullYear() === 2026) {
-                            const nDrinks = updated[nStr] ? [...updated[nStr]] : [];
-                            const isDup = nDrinks.some(x => x.shopName === d.shopName && x.itemName === d.itemName);
-                            if (!isDup && nDrinks.length < 3) {
-                                nDrinks.push({ ...d, price: '', continueTomorrow: false });
-                                updated[nStr] = nDrinks;
-                            }
-                        }
-                    }
-                });
-                setRecords(updated);
-                saveToCloud(updated);
-                setIsModalOpen(false);
-            };
+    // 智慧月份定位：若系統年份是 2026，就直接落在當前實際月份
+    function getInitialMonth() {
+      const now = new Date();
+      if (now.getFullYear() === 2026) return new Date(2026, now.getMonth(), 1);
+      return new Date(2026, 0, 1);
+    }
 
-            // 產生當前月曆顯示的日期格陣列
-            const calendarDays = useMemo(() => {
-                const year = currentMonth.getFullYear();
-                const month = currentMonth.getMonth();
-                const first = new Date(year, month, 1).getDay(); // 計算月初是星期幾
-                const total = new Date(year, month + 1, 0).getDate(); // 計算當月總天數
-                const days = [];
-                for (let i = 0; i < first; i++) days.push(null); // 月初前的空格
-                for (let d = 1; d <= total; d++) days.push(new Date(year, month, d)); // 每日日期
-                return days;
-            }, [currentMonth]);
+    function setStatus(level, title, detail, meta) {
+      state.status = { level: level, title: title, detail: detail, meta: meta };
+      renderStatus();
+    }
 
-            return (
-                <div className="max-w-4xl mx-auto p-2 md:p-4 py-8 relative">
-                    <div className="fixed top-10 left-10 float-element opacity-20 pointer-events-none"><IconStar className="w-20 h-20 text-[#FFF9E6]" fill="#FFF9E6" /></div>
-                    <div className="fixed bottom-20 right-10 float-element opacity-20 pointer-events-none" style={{animationDelay: '1s'}}><IconHeart className="w-24 h-24 text-[#FDE2E4]" fill="#FDE2E4" /></div>
-                    
-                    {/* 主介面外殼 */}
-                    <div className="glass-panel rounded-[50px] shadow-2xl overflow-hidden border-[10px] border-white/60">
-                        
-                        {/* 頂部標題與月份切換列 */}
-                        <div className="p-8 md:p-12 flex flex-col md:flex-row justify-between items-center gap-6">
-                            <div className="flex flex-col items-center md:items-start group">
-                                <h1 className="text-3xl md:text-4xl font-black text-[#B2A4B8] flex items-center gap-4 tracking-tighter italic">
-                                    <IconBoba className="w-10 h-10 md:w-14 h-14 text-[#D1C4D4] group-hover:scale-110 transition-transform duration-500" /> 是有多愛喝
-                                </h1>
-                                <p className="text-[10px] font-black text-[#D1C4D4] tracking-[0.3em] ml-2 mt-1">2026 DRINK TRACKER</p>
-                            </div>
-                            
-                            <div className="flex items-center gap-4 md:gap-8 bg-white/50 px-6 md:px-8 py-3 rounded-full border border-white/80 shadow-inner">
-                                <button onClick={() => changeMonth(-1)} className="w-8 h-8 md:w-10 md:h-10 flex items-center justify-center hover:scale-125 transition-transform bg-white/40 rounded-full text-[#B2A4B8] font-bold">&lt;</button>
-                                <div className="text-center min-w-[80px] md:min-w-[100px]">
-                                    <span className="text-xl md:text-2xl font-black text-[#94849A] block leading-none">{currentMonth.getFullYear()}</span>
-                                    <span className="text-xs md:text-sm font-bold text-[#B2A4B8]">{currentMonth.getMonth() + 1}月</span>
-                                </div>
-                                <button onClick={() => changeMonth(1)} className="w-8 h-8 md:w-10 md:h-10 flex items-center justify-center hover:scale-125 transition-transform bg-white/40 rounded-full text-[#B2A4B8] font-bold">&gt;</button>
-                            </div>
-                        </div>
+    function renderStatus() {
+      elements.statusDot.className = "status-dot " + state.status.level;
+      elements.statusTitle.textContent = state.status.title;
+      elements.statusDetail.textContent = state.status.detail;
+      elements.statusMeta.textContent = state.status.meta;
+    }
 
-                        {/* 統計摘要卡片區 */}
-                        <div className="px-10 grid grid-cols-1 md:grid-cols-3 gap-5 mb-10">
-                            <div className="bg-[#FDE2E4]/25 p-5 rounded-[35px] border border-[#FDE2E4]/40 flex flex-col items-center justify-center">
-                                <p className="text-[9px] font-black uppercase tracking-widest text-[#C19EA3] mb-1">Monthly Total</p>
-                                <p className="text-2xl md:text-3xl font-black text-[#E5A7AF]">{monthlyStats.cups} 杯</p>
-                            </div>
-                            <div className="bg-[#F3E5F5]/25 p-4 md:p-5 rounded-[25px] md:rounded-[35px] border border-[#F3E5F5]/40 flex flex-col items-center justify-center">
-                                <p className="text-[9px] font-black uppercase tracking-widest text-[#A696AF] mb-1">Expense</p>
-                                <p className="text-2xl md:text-3xl font-black text-[#B39DDB]">${monthlyStats.cost}</p>
-                            </div>
-                            <div className="bg-[#FDFBF2]/40 p-4 md:p-5 rounded-[25px] md:rounded-[35px] border border-[#FFF9E6]/40 flex flex-col items-center justify-center">
-                                <p className="text-[9px] font-black uppercase tracking-widest text-[#B8B89F] mb-1">Favorite Shop</p>
-                                <p className="text-xs md:text-sm font-black text-[#A3A38E] truncate max-w-full text-center">{monthlyStats.fav}</p>
-                            </div>
-                        </div>
+    function formatDate(date) {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const day = String(date.getDate()).padStart(2, "0");
+      return year + "-" + month + "-" + day;
+    }
 
-                        {}
-                        {/* 月曆表格區 */}
-                        <div className="p-10 pt-0 grid grid-cols-7 gap-3">
-                            
-                            {/* 星期名稱 */}
-                            {['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'].map(d => <div key={d} className="text-center text-[9px] font-black text-[#D1C4D4] tracking-widest pb-3">{d}</div>)}
-                            
-                            {/* 渲染每一個日期格子 */}
-                            {calendarDays.map((d, i) => {
-                                if (!d) return <div key={`e-${i}`} className="h-16 md:h-28" />; // 空格格位
-                                const s = formatDate(d);
-                                const rs = records[s] || []; // 獲取當日紀錄
-                                
-                                let bgClass = 'bg-white/40';
-                                if (rs.length === 1) bgClass = 'bg-[#FDE2E4]/20';
-                                else if (rs.length === 2) bgClass = 'bg-[#FDE2E4]/40';
-                                else if (rs.length >= 3) bgClass = 'bg-[#F8BBD0]/30';
+    function changeMonth(offset) {
+      state.currentMonth = new Date(state.currentMonth.getFullYear(), state.currentMonth.getMonth() + offset, 1);
+      render();
+    }
 
-                                return (
-                                    <button 
-                                        key={s} 
-                                        onClick={() => { setSelectedDate(d); setIsModalOpen(true); }} 
-                                        className={`h-20 md:h-28 rounded-[20px] md:rounded-[35px] border-2 border-white/40 flex flex-col p-1.5 md:p-3 transition-all hover:scale-105 hover:bg-white/90 hover:shadow-xl group relative overflow-hidden ${bgClass}`}
-                                    >
-                                        <span className="text-[10px] md:text-[11px] font-black text-[#B2A4B8] group-hover:text-[#94849A] relative z-10">{d.getDate()}</span>
-                                        <div className="mt-1 md:mt-2 space-y-0.5 md:space-y-1 w-full relative z-10 overflow-hidden">
-                                            {rs.map((r, idx) => {
-                                                // 根據日期和索引生成一個確定的隨機數 (用於選擇圖示)
-                                                const iconIndex = (d.getDate() + idx) % RandomIcons.length;
-                                                const IconComponent = RandomIcons[iconIndex];
-                                                return (
-                                                    <div key={idx} className="flex items-center gap-1 text-[7px] md:text-[8px] bg-white/70 rounded-full px-1 md:px-2 py-0.5 truncate font-bold text-[#94849A] border border-white/60 shadow-sm">
-                                                        <IconComponent className="w-2 h-2 md:w-2 md:h-2 text-[#E5A7AF] shrink-0" />
-                                                        <span className="hidden md:inline truncate">{r.itemName || '飲品'}</span>
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
-                                        {/* 背景裝飾圖示：僅當有紀錄時顯示一個大圖示在右下角 */}
-                                        {rs.length > 0 && (
-                                            <div className="absolute -bottom-1 -right-1 opacity-20 md:opacity-10 group-hover:opacity-20 transition-opacity">
-                                                {React.createElement(RandomIcons[d.getDate() % RandomIcons.length], { className: "w-6 h-6 md:w-10 md:h-10" })}
-                                            </div>
-                                        )}
-                                    </button>
-                                );
-                            })}
-                        </div>
-                    </div>
+    // 主渲染入口：統一更新頁首、統計、月曆與狀態列
+    function render() {
+      renderHeader();
+      renderStats();
+      renderCalendar();
+      renderStatus();
+      if (state.selectedDate) renderEditor();
+    }
 
-                    {/* 飲品編輯彈窗組件 */}
-                    {isModalOpen && selectedDate && (
-                        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#F8F2FC]/50 backdrop-blur-xl">
-                            <div className="bg-white/95 w-full max-w-xl max-h-[90vh] overflow-y-auto rounded-[40px] md:rounded-[50px] shadow-3xl p-6 md:p-10 border-4 md:border-[10px] border-white animate-in zoom-in-95 duration-300">
-                                <div className="flex justify-between items-center mb-6 md:mb-8">
-                                    <div className="flex items-center gap-3">
-                                        <div className="bg-[#FAF7FD] p-2 md:p-3 rounded-2xl"><IconBoba className="w-6 h-6 md:w-8 md:h-8 text-[#B2A4B8]" /></div>
-                                        <h2 className="text-2xl md:text-3xl font-black text-[#B2A4B8] italic">{formatDate(selectedDate)}</h2>
-                                    </div>
-                                    <button onClick={() => setIsModalOpen(false)} className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-[#FAF7FD] flex items-center justify-center text-[#B2A4B8] hover:bg-[#FDE2E4] hover:text-white transition-colors">✕</button>
-                                </div>
-                                <DrinkEditor initialDrinks={records[formatDate(selectedDate)] || []} onSave={(drinks) => handleSave(formatDate(selectedDate), drinks)} />
-                            </div>
-                        </div>
-                    )}
-                </div>
-            );
-        }
+    function renderHeader() {
+      elements.yearLabel.textContent = String(state.currentMonth.getFullYear());
+      elements.monthLabel.textContent = (state.currentMonth.getMonth() + 1) + " 月";
+    }
 
-        // 飲品清單編輯組件
-        function DrinkEditor({ initialDrinks, onSave }) {
-            // 初始化飲品狀態，若無舊紀錄則給予一組預設空白值
-            const [drinks, setDrinks] = useState(initialDrinks);
-            // 新增一組空白飲品欄位
-            const add = () => drinks.length < 3 && setDrinks([...drinks, { shopName: '', itemName: '', price: '', size: '中杯', ice: '正常冰', sugar: '微糖', continueTomorrow: false }]);
-            const up = (i, f, v) => { const n = [...drinks]; n[i][f] = v; setDrinks(n); };
+    // 當月統計：只把有價格的項目計入杯數與花費
+    function renderStats() {
+      const prefix = state.currentMonth.getFullYear() + "-" + String(state.currentMonth.getMonth() + 1).padStart(2, "0");
+      let cups = 0;
+      let cost = 0;
+      const shops = {};
 
-            return (
-                <div className="space-y-6 md:space-y-8">
-                    {/* 遍歷渲染每一杯飲料的編輯區塊 */}
-                    {drinks.map((d, i) => (
-                        <div key={i} className="bg-[#FDFBFD] p-6 md:p-8 rounded-[30px] md:rounded-[40px] border-2 border-[#F8F2FC] relative shadow-inner">
-                            <button onClick={() => setDrinks(drinks.filter((_, idx) => idx !== i))} className="absolute -top-3 -right-3 w-8 h-8 md:w-10 md:h-10 bg-white border-2 border-[#F8F2FC] rounded-full flex items-center justify-center text-[#D1C4D4] hover:text-red-300 transition-colors shadow-sm font-bold">✕</button>
+      Object.keys(state.records).forEach(function (dateKey) {
+        if (!dateKey.startsWith(prefix)) return;
+        (state.records[dateKey] || []).forEach(function (drink) {
+          if (drink.price !== "" && drink.price !== null && drink.price !== undefined) {
+            cups += 1;
+            cost += Number(drink.price) || 0;
+          }
+          if (drink.shopName) shops[drink.shopName] = (shops[drink.shopName] || 0) + 1;
+        });
+      });
 
-                            {/* 店家與品項輸入 */}
-                            <div className="grid grid-cols-2 gap-3 md:gap-5 mb-5">
-                                <div className="space-y-2">
-                                    <p className="text-[9px] font-black text-[#D1C4D4] tracking-widest uppercase ml-2">Shop</p>
-                                    <input className="w-full p-3 md:p-4 bg-white rounded-2xl border border-[#F8F2FC] outline-none text-sm font-bold placeholder-[#D1C4D4] focus:ring-2 ring-[#E2F0FB]/50" placeholder="店家名稱" value={d.shopName} onChange={e => up(i, 'shopName', e.target.value)} />
-                                </div>
-                                <div className="space-y-2">
-                                    <p className="text-[9px] font-black text-[#D1C4D4] tracking-widest uppercase ml-2">Item</p>
-                                    <input className="w-full p-3 md:p-4 bg-white rounded-2xl border border-[#F8F2FC] outline-none text-sm font-bold placeholder-[#D1C4D4] focus:ring-2 ring-[#E2F0FB]/50" placeholder="想喝什麼？" value={d.itemName} onChange={e => up(i, 'itemName', e.target.value)} />
-                                </div>
-                            </div>
-                            {/* 價格與杯量選擇 */}                            
-                            <div className="grid grid-cols-2 gap-3 md:gap-5 mb-5">
-                                <div className="space-y-2">
-                                    <p className="text-[9px] font-black text-[#D1C4D4] tracking-widest uppercase ml-2">Price</p>
-                                    <input type="number" className="w-full p-3 md:p-4 bg-white rounded-2xl border border-[#F8F2FC] outline-none text-sm font-bold" placeholder="NT$" value={d.price} onChange={e => up(i, 'price', e.target.value)} />
-                                </div>
-                                <div className="space-y-2">
-                                    <p className="text-[9px] font-black text-[#D1C4D4] tracking-widest uppercase ml-2">Size</p>
-                                    <div className="flex gap-2">
-                                        {['中杯', '大杯'].map(s => (
-                                            <button key={s} type="button" onClick={() => up(i, 'size', s)} className={`flex-1 py-3 md:py-4 rounded-2xl text-xs font-black transition-all ${d.size === s ? 'bg-[#E2F0FB] text-[#7895B2] shadow-sm' : 'bg-white text-[#D1C4D4] border border-[#F8F2FC]'}`}>{s}</button>
-                                        ))}
-                                    </div>
-                                </div>
-                            </div>
-                            {/* 冰塊選項按鈕區 */}
-                            <div className="mb-5 space-y-2">
-                                <p className="text-[9px] font-black text-[#D1C4D4] tracking-widest uppercase ml-2">Ice Level</p>
-                                <div className="flex flex-wrap gap-2">
-                                    {ICE_OPTIONS.map(o => (
-                                        <button key={o} type="button" onClick={() => up(i, 'ice', o)} className={`px-3 md:px-4 py-2 md:py-2.5 rounded-xl text-[10px] font-black transition-all ${d.ice === o ? 'bg-[#E2F0FB] text-[#7895B2] border-[#E2F0FB]' : 'bg-white text-[#D1C4D4] border border-[#F8F2FC]'}`}>{o}</button>
-                                    ))}
-                                </div>
-                            </div>
+      let favorite = "無紀錄";
+      const shopEntries = Object.entries(shops).sort(function (left, right) { return right[1] - left[1]; });
+      if (shopEntries.length) favorite = shopEntries[0][0];
 
-                            <div className="mb-6 space-y-2">
-                                <p className="text-[9px] font-black text-[#D1C4D4] tracking-widest uppercase ml-2">Sugar Level</p>
-                                <div className="flex flex-wrap gap-2">
-                                    {SUGAR_OPTIONS.map(o => (
-                                        <button key={o} type="button" onClick={() => up(i, 'sugar', o)} className={`px-3 md:px-4 py-2 md:py-2.5 rounded-xl text-[10px] font-black transition-all ${d.sugar === o ? 'bg-[#F3E5F5] text-[#A696AF] border-[#F3E5F5]' : 'bg-white text-[#D1C4D4] border border-[#F8F2FC]'}`}>{o}</button>
-                                    ))}
-                                </div>
-                            </div>
+      elements.cupsValue.textContent = cups + " 杯";
+      elements.costValue.textContent = "$" + cost;
+      elements.shopValue.textContent = favorite;
+    }
 
-                            <label className="flex items-center gap-3 cursor-pointer p-3 md:p-4 bg-white rounded-2xl border border-[#F8F2FC] group">
-                                <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all ${d.continueTomorrow ? 'bg-[#FDE2E4] border-[#FDE2E4]' : 'bg-white border-[#F8F2FC]'}`}>
-                                    {d.continueTomorrow && <IconHeart fill="white" className="w-4 h-4 text-white" />}
-                                </div>
-                                <input type="checkbox" className="hidden" checked={d.continueTomorrow} onChange={e => up(i, 'continueTomorrow', e.target.checked)} /> 
-                                <span className="text-xs font-black text-[#B2A4B8] group-hover:text-[#FDE2E4]">明天繼續喝</span>
-                            </label>
-                        </div>
-                    ))}
-                    {/* 控制動作按鈕 */}
-                    {drinks.length < 3 && (
-                        <button onClick={add} className="w-full py-6 md:py-8 border-4 border-dashed border-[#F8F2FC] rounded-[30px] md:rounded-[40px] text-[#D1C4D4] font-black hover:bg-[#FAF7FD] hover:text-[#B2A4B8] transition-all flex flex-col items-center gap-2">
-                            <span className="text-2xl md:text-3xl">＋</span>
-                            <span className="text-[10px] tracking-widest uppercase">Add Another Cup</span>
-                        </button>
-                    )}
+    function renderWeekdays() {
+      elements.weekdayRow.innerHTML = WEEKDAYS.map(function (label) {
+        return '<div class="weekday">' + label + "</div>";
+      }).join("");
+    }
 
-                    <button 
-                        onClick={() => onSave(drinks)} 
-                        className="w-full py-4 md:py-5 bg-[#FDE2E4] text-[#C19EA3] rounded-[20px] md:rounded-[25px] font-black text-lg shadow-xl shadow-[#FDE2E4]/40 btn-hover-sparkle transition-all active:scale-95"
-                    >
-                        儲存
-                    </button>
-                </div>
-            );
-        }
+    // 月曆格渲染：依日期內容決定底色與右下角的小裝飾符號
+    function renderCalendar() {
+      const year = state.currentMonth.getFullYear();
+      const month = state.currentMonth.getMonth();
+      const firstWeekday = new Date(year, month, 1).getDay();
+      const totalDays = new Date(year, month + 1, 0).getDate();
+      const tiles = [];
 
-        // 啟動 React 渲染流程
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<App />);
-    </script>
+      for (let index = 0; index < firstWeekday; index += 1) {
+        tiles.push('<div class="day-empty"></div>');
+      }
+
+      for (let day = 1; day <= totalDays; day += 1) {
+        const currentDate = new Date(year, month, day);
+        const dateKey = formatDate(currentDate);
+        const drinks = state.records[dateKey] || [];
+        const level = Math.min(drinks.length, 3);
+        const drinkPills = drinks.slice(0, 3).map(function (drink, index) {
+          const extraClass = index === 2 && drinks.length > 3 ? " pill-more" : "";
+          const label = index === 2 && drinks.length > 3
+            ? "+" + (drinks.length - 2) + " 杯"
+            : escapeHtml(drink.itemName || "飲品");
+          const dot = index === 2 && drinks.length > 3 ? "" : '<span class="pill-dot"></span>';
+          return '<div class="pill' + extraClass + '">' + dot + '<span class="pill-label">' + label + "</span></div>";
+        }).join("");
+        const mobileMore = drinks.length > 1 ? '<div class="mobile-more">+' + (drinks.length - 1) + ' 杯飲料</div>' : "";
+        const countClass = drinks.length === 0 ? "day-count is-empty" : "day-count";
+
+        tiles.push(
+          '<button class="day" type="button" data-date="' + dateKey + '" data-level="' + level + '">' +
+            '<div class="day-top"><div class="day-number">' + day + '</div><div class="' + countClass + '">' + drinks.length + ' 杯</div></div>' +
+            '<div class="day-list">' + drinkPills + mobileMore + "</div>" +
+            (drinks.length > 0 ? '<div class="day-mark">' + DAY_MARKS[day % DAY_MARKS.length] + "</div>" : "") +
+          "</button>"
+        );
+      }
+
+      elements.daysGrid.innerHTML = tiles.join("");
+      elements.daysGrid.querySelectorAll(".day").forEach(function (button) {
+        button.addEventListener("click", function () { openModal(button.dataset.date); });
+      });
+    }
+
+    function openModal(dateKey) {
+      state.selectedDate = dateKey;
+      state.modalDrinks = deepCopy(state.records[dateKey] || []);
+      elements.overlay.classList.add("show");
+      elements.overlay.setAttribute("aria-hidden", "false");
+      renderEditor();
+    }
+
+    function closeModal() {
+      state.selectedDate = null;
+      state.modalDrinks = [];
+      elements.overlay.classList.remove("show");
+      elements.overlay.setAttribute("aria-hidden", "true");
+    }
+
+    function addDrink() {
+      if (state.modalDrinks.length >= 3) return;
+      state.modalDrinks.push(defaultDrink());
+      renderEditor();
+    }
+
+    function removeDrink(index) {
+      state.modalDrinks.splice(index, 1);
+      renderEditor();
+    }
+
+    function updateDrink(index, field, value) {
+      state.modalDrinks[index][field] = value;
+      renderEditor();
+    }
+
+    // 編輯器渲染：每次異動後重新輸出當日所有飲料欄位
+    function renderEditor() {
+      elements.modalDateTitle.textContent = state.selectedDate || "";
+
+      if (!state.modalDrinks.length) {
+        elements.editorList.innerHTML = '<div class="empty-note">這一天還沒有飲料紀錄，按下「新增一杯」開始吧。</div>';
+        return;
+      }
+
+      elements.editorList.innerHTML = state.modalDrinks.map(function (drink, index) {
+        return (
+          '<article class="drink-card">' +
+            '<button class="remove-btn" type="button" data-remove="' + index + '" aria-label="刪除">✕</button>' +
+            '<div class="grid-2">' +
+              inputField(index, "shopName", "Shop", "店家名稱", drink.shopName) +
+              inputField(index, "itemName", "Item", "想喝什麼？", drink.itemName) +
+            "</div>" +
+            '<div class="grid-2">' +
+              inputField(index, "price", "Price", "NT$", drink.price, "number") +
+              optionSection(index, "size", "Size", SIZE_OPTIONS, drink.size, "active-blue") +
+            "</div>" +
+            optionSection(index, "ice", "Ice Level", ICE_OPTIONS, drink.ice, "active-blue") +
+            optionSection(index, "sugar", "Sugar Level", SUGAR_OPTIONS, drink.sugar, "active-pink") +
+            '<button class="toggle" type="button" data-toggle="' + index + '" data-on="' + String(Boolean(drink.continueTomorrow)) + '">' +
+              '<span class="toggle-box">' + (drink.continueTomorrow ? "✓" : "") + "</span>" +
+              '<span class="toggle-text">明天繼續喝</span>' +
+            "</button>" +
+          "</article>"
+        );
+      }).join("");
+
+      elements.editorList.querySelectorAll("[data-remove]").forEach(function (button) {
+        button.addEventListener("click", function () { removeDrink(Number(button.dataset.remove)); });
+      });
+
+      elements.editorList.querySelectorAll("[data-toggle]").forEach(function (button) {
+        button.addEventListener("click", function () {
+          const index = Number(button.dataset.toggle);
+          updateDrink(index, "continueTomorrow", !state.modalDrinks[index].continueTomorrow);
+        });
+      });
+
+      elements.editorList.querySelectorAll("[data-input]").forEach(function (input) {
+        input.addEventListener("input", function () {
+          updateDrink(Number(input.dataset.index), input.dataset.field, input.value);
+        });
+      });
+
+      elements.editorList.querySelectorAll("[data-option]").forEach(function (button) {
+        button.addEventListener("click", function () {
+          updateDrink(Number(button.dataset.index), button.dataset.field, button.dataset.optionValue);
+        });
+      });
+    }
+
+    function inputField(index, field, label, placeholder, value, type) {
+      return (
+        '<div class="field">' +
+          '<label>' + label + "</label>" +
+          '<input class="text-input" data-input="true" data-index="' + index + '" data-field="' + field + '" type="' + (type || "text") + '" placeholder="' + escapeAttribute(placeholder) + '" value="' + escapeAttribute(String(value || "")) + '">' +
+        "</div>"
+      );
+    }
+
+    function optionSection(index, field, label, options, value, activeClass) {
+      const chips = options.map(function (option) {
+        const className = option === value ? "chip " + activeClass : "chip";
+        return '<button class="' + className + '" type="button" data-option="true" data-index="' + index + '" data-field="' + field + '" data-option-value="' + escapeAttribute(option) + '">' + escapeHtml(option) + "</button>";
+      }).join("");
+
+      return (
+        '<div class="field">' +
+          '<div class="option-label">' + label + "</div>" +
+          '<div class="chips">' + chips + "</div>" +
+        "</div>"
+      );
+    }
+
+    // 儲存單日資料：同步處理明日延續飲品與 Firebase 回寫
+    async function saveSelectedDate() {
+      if (!state.selectedDate) return;
+
+      const cleaned = state.modalDrinks
+        .map(normalizeDrink)
+        .filter(hasMeaningfulDrink);
+
+      const updated = deepCopy(state.records);
+      updated[state.selectedDate] = cleaned;
+
+      cleaned.forEach(function (drink) {
+        if (!drink.continueTomorrow) return;
+        const nextDate = new Date(state.selectedDate);
+        nextDate.setDate(nextDate.getDate() + 1);
+        if (nextDate.getFullYear() !== 2026) return;
+
+        const nextKey = formatDate(nextDate);
+        const nextDrinks = Array.isArray(updated[nextKey]) ? deepCopy(updated[nextKey]) : [];
+        const duplicate = nextDrinks.some(function (item) {
+          return item.shopName === drink.shopName && item.itemName === drink.itemName;
+        });
+
+        if (duplicate || nextDrinks.length >= 3) return;
+
+        const carry = normalizeDrink(drink);
+        carry.price = "";
+        carry.continueTomorrow = false;
+        nextDrinks.push(carry);
+        updated[nextKey] = nextDrinks;
+      });
+
+      if (!cleaned.length) delete updated[state.selectedDate];
+
+      state.records = updated;
+      persistCache();
+      closeModal();
+      render();
+      await pushRecords(updated);
+    }
+
+    function defaultDrink() {
+      return {
+        shopName: "",
+        itemName: "",
+        price: "",
+        size: "中杯",
+        ice: "正常冰",
+        sugar: "微糖",
+        continueTomorrow: false
+      };
+    }
+
+    // 資料清洗：把空值、預設值與布林欄位整理成一致格式
+    function normalizeDrink(drink) {
+      return {
+        shopName: String(drink.shopName || "").trim(),
+        itemName: String(drink.itemName || "").trim(),
+        price: String(drink.price === undefined || drink.price === null ? "" : drink.price).trim(),
+        size: SIZE_OPTIONS.includes(drink.size) ? drink.size : "中杯",
+        ice: ICE_OPTIONS.includes(drink.ice) ? drink.ice : "正常冰",
+        sugar: SUGAR_OPTIONS.includes(drink.sugar) ? drink.sugar : "微糖",
+        continueTomorrow: Boolean(drink.continueTomorrow)
+      };
+    }
+
+    function hasMeaningfulDrink(drink) {
+      return Boolean(drink.shopName || drink.itemName || drink.price);
+    }
+
+    // 工具函式：深拷貝避免直接污染原始狀態
+    function deepCopy(value) {
+      return JSON.parse(JSON.stringify(value));
+    }
+
+    // 錯誤說明：把 Firebase 錯誤轉成較容易理解的提示文字
+    function humanizeError(error) {
+      if (!error) return "未知錯誤。";
+      const code = error.code ? String(error.code) : "";
+      if (location.protocol === "file:" && code.indexOf("auth/") === 0) {
+        return "目前是以 file:/// 直接開啟，若匿名登入被瀏覽器擋下，請改用 localhost 開啟。";
+      }
+      return code || error.message || String(error);
+    }
+
+    // 文字跳脫：避免使用者輸入直接插進 HTML 造成版面或標記錯亂
+    function escapeHtml(text) {
+      return String(text)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;");
+    }
+
+    function escapeAttribute(text) {
+      return escapeHtml(text).replaceAll("'", "&#39;");
+    }
+  </script>
 </body>
 </html>
